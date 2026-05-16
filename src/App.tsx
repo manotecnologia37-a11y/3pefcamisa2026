@@ -1420,14 +1420,14 @@ export default function App() {
                   <X className="w-6 h-6" />
                 </button>
                 <div className="flex-1 text-left">
-                  <h3 className="text-[19px] sm:text-4xl font-black uppercase italic tracking-tighter leading-none mb-1">
+                  <h3 className="text-[31px] sm:text-4xl font-black uppercase italic tracking-tighter leading-none mb-1">
                     {editingRegistration ? 'EDITAR MINHA' : 'PERSONALIZAR'} {editingRegistration ? 'RESERVA' : 'MANTO'}
                   </h3>
-                  <p className="text-primary text-[8px] sm:text-xs font-black uppercase tracking-[0.3em] opacity-70 italic shadow-sm">Defina os detalhes da sua glória</p>
+                  <p className="text-primary text-[9px] sm:text-xs font-black uppercase tracking-[0.3em] opacity-70 italic shadow-sm">Defina os detalhes da sua glória</p>
                 </div>
               </div>
 
-              <form onSubmit={handleSubmit} className="p-4 sm:p-8 -mt-5 sm:-mt-8 bg-[#111] rounded-t-[1.5rem] sm:rounded-t-[3rem] relative z-10 space-y-4 sm:space-y-6">
+              <form onSubmit={handleSubmit} className="p-4 sm:p-8 -mt-5 sm:-mt-8 bg-[#111] rounded-t-[1.5rem] sm:rounded-t-[3rem] relative z-10 space-y-4 sm:space-y-6 text-[14px]">
                 {error && (
                   <motion.div 
                     initial={{ opacity: 0, scale: 0.95 }}
