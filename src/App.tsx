@@ -1111,7 +1111,10 @@ export default function App() {
                             <input
                               type="number"
                               value={jerseyForm.order}
-                              onChange={(e) => setJerseyForm({...jerseyForm, order: parseInt(e.target.value)})}
+                              onChange={(e) => {
+                              const val = parseInt(e.target.value);
+                              setJerseyForm({...jerseyForm, order: isNaN(val) ? 0 : val});
+                            }}
                               className="w-full bg-black/40 border-2 border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:border-primary transition-all font-black"
                             />
                           </div>
@@ -1472,7 +1475,10 @@ export default function App() {
                     <label className="text-[10px] uppercase font-black tracking-[0.3em] text-gray-500 pl-2">Quantidade</label>
                     <select
                       value={quantity}
-                      onChange={(e) => setQuantity(parseInt(e.target.value))}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value);
+                        setQuantity(isNaN(val) ? 1 : val);
+                      }}
                       className="w-full bg-white/5 border-2 border-white/10 rounded-2xl px-6 py-5 focus:outline-none focus:border-primary focus:bg-white/10 transition-all font-black text-xl appearance-none cursor-pointer"
                     >
                       {[1, 2, 3, 4, 5].map(q => <option key={q} value={q} className="bg-[#111]">{q} {q === 1 ? 'Camisa' : 'Camisas'}</option>)}
