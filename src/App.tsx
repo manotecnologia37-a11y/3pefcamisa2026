@@ -174,6 +174,8 @@ export default function App() {
       console.error("Login attempt failed:", err);
       if (err.code === 'auth/popup-closed-by-user') {
         setError("O login foi cancelado ou fechou inesperadamente. Verifique se o seu navegador não bloqueou o pop-up.");
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setError("Este domínio não está autorizado no Firebase Console. Adicione '3pefcamisa2026.vercel.app' em Authentication > Settings > Authorized Domains.");
       } else if (err.code === 'auth/network-request-failed') {
         setError("Erro de rede ao tentar logar. Verifique sua conexão.");
       } else {
