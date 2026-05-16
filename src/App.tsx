@@ -577,10 +577,10 @@ export default function App() {
             </span>
             <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-[8rem] font-black mb-4 sm:mb-8 tracking-tight sm:tracking-tighter uppercase italic leading-[0.85] sm:leading-[0.8] drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
               {(siteConfig.heroTitle || '').split(' ').map((word, i) => (
-                <span key={i} className={word === 'MANTO' || word === 'CAMISA' ? 'text-primary block sm:inline' : ''}>{word} </span>
+                <span key={i} className={word === 'MANTO' || word === 'CAMISA' ? 'text-primary' : ''}>{word} </span>
               ))}
             </h1>
-            <p className="text-gray-400 text-sm sm:text-lg md:text-xl font-medium max-w-[280px] xs:max-w-md sm:max-w-2xl md:max-w-3xl mx-auto mb-10 sm:mb-14 leading-relaxed opacity-80 italic">
+            <p className="text-gray-400 text-xs sm:text-lg md:text-xl font-medium max-w-[280px] xs:max-w-md sm:max-w-2xl md:max-w-3xl mx-auto mb-10 sm:mb-14 leading-relaxed opacity-80 italic uppercase tracking-widest">
               {siteConfig.heroSubtitle}
             </p>
             
@@ -593,21 +593,21 @@ export default function App() {
                  currentUser ? setIsModalOpen(true) : handleLogin();
                }}
                disabled={!siteConfig.isOpen && !isAdmin}
-               className={`${(siteConfig.isOpen || isAdmin) ? 'bg-primary hover:bg-primary/90 shadow-2xl hover:shadow-primary/20 hover:scale-105 active:scale-95' : 'bg-gray-800 text-gray-500 cursor-not-allowed'} px-10 py-6 rounded-3xl flex items-center gap-4 transition-all group z-30`}
+               className={`${(siteConfig.isOpen || isAdmin) ? 'bg-primary hover:bg-primary/90 shadow-2xl hover:shadow-primary/20 hover:scale-105 active:scale-95' : 'bg-gray-800 text-gray-500 cursor-not-allowed'} px-6 py-4 sm:px-10 sm:py-6 rounded-2xl sm:rounded-3xl flex items-center gap-3 sm:gap-4 transition-all group z-30`}
             >
                {(siteConfig.isOpen || isAdmin) ? (
                  <>
-                   <div className="bg-black/10 p-2 rounded-xl group-hover:bg-black/20 transition-colors">
-                    <Plus className="w-6 h-6 text-black group-hover:rotate-90 transition-transform" />
+                   <div className="bg-black/10 p-1.5 sm:p-2 rounded-lg sm:rounded-xl group-hover:bg-black/20 transition-colors">
+                    <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-black group-hover:rotate-90 transition-transform" />
                    </div>
-                   <span className="text-black font-black text-lg uppercase tracking-widest italic">
+                   <span className="text-black font-black text-sm sm:text-lg uppercase tracking-widest italic">
                      {currentUser ? 'FAZER MINHA RESERVA' : 'ENTRE PARA RESERVAR'}
                    </span>
                  </>
                ) : (
                  <>
-                   <X className="w-6 h-6" />
-                   <span className="font-black text-lg uppercase tracking-widest italic text-gray-500">SISTEMA FECHADO</span>
+                   <X className="w-5 h-5 sm:w-6 sm:h-6" />
+                   <span className="font-black text-sm sm:text-lg uppercase tracking-widest italic text-gray-500">SISTEMA FECHADO</span>
                  </>
                )}
             </button>
@@ -617,16 +617,16 @@ export default function App() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 -mt-10 relative z-30">
-        <div className="flex flex-col gap-12">
+        <div className="flex flex-col gap-20 sm:gap-32">
           
           {/* Showcase (Vitrine) */}
           {(jerseys.length > 0 || isAdmin) && (
-            <section className="space-y-8 min-h-[100px]">
+            <section className="space-y-8 sm:space-y-12 min-h-[100px]">
               <div className="text-center">
-                <h2 className="text-3xl sm:text-5xl font-black uppercase tracking-tighter italic flex items-center justify-center gap-3">
+                <h2 className="text-2xl sm:text-5xl font-black uppercase tracking-tighter italic flex items-center justify-center gap-2 sm:gap-4 px-4 leading-tight">
                   VITRINE DE <span className="text-primary">GLÓRIA</span>
                 </h2>
-                <div className="w-24 h-1 bg-primary mx-auto mt-4 rounded-full" />
+                <div className="w-16 sm:w-24 h-1 bg-primary mx-auto mt-4 rounded-full" />
               </div>
 
               {jerseys.length === 0 ? (
