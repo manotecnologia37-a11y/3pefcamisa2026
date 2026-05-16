@@ -486,6 +486,10 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white font-sans selection:bg-primary selection:text-black">
+<style>{`
+        .scrollbar-none::-webkit-scrollbar { display: none; }
+        .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
       {/* Header */}
       <header className="border-b border-[#1a3b32] bg-black/80 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
@@ -1415,49 +1419,37 @@ export default function App() {
                 >
                   <X className="w-6 h-6" />
                 </button>
-                <div className="mb-6 flex justify-between items-start">
-                  <div className="bg-black/20 p-4 rounded-3xl border border-primary/20">
-                    {siteConfig.logoUrl ? (
-                      <img 
-                        src={siteConfig.logoUrl} 
-                        alt="Logo" 
-                        className="w-10 h-10 sm:w-12 sm:h-12 object-contain" 
-                        referrerPolicy="no-referrer"
-                      />
-                    ) : (
-                      <Trophy className="w-10 h-10 sm:w-12 sm:h-12 text-primary drop-shadow-[0_0_15px_rgba(212,175,55,0.5)]" />
-                    )}
-                  </div>
+                <div className="flex-1 text-left">
+                  <h3 className="text-[19px] sm:text-4xl font-black uppercase italic tracking-tighter leading-none mb-1">
+                    {editingRegistration ? 'EDITAR MINHA' : 'PERSONALIZAR'} {editingRegistration ? 'RESERVA' : 'MANTO'}
+                  </h3>
+                  <p className="text-primary text-[8px] sm:text-xs font-black uppercase tracking-[0.3em] opacity-70 italic shadow-sm">Defina os detalhes da sua glória</p>
                 </div>
-                <h3 className="text-3xl sm:text-4xl font-black uppercase italic tracking-tighter leading-none mb-2">
-                  {editingRegistration ? 'EDITAR MINHA' : 'PERSONALIZAR'} <br /> {editingRegistration ? 'RESERVA' : 'MEU MANTO'}
-                </h3>
-                <p className="text-primary text-[10px] sm:text-xs font-black uppercase tracking-[0.3em] opacity-70">Defina os detalhes da sua glória</p>
               </div>
 
-              <form onSubmit={handleSubmit} className="p-6 sm:p-10 -mt-8 bg-[#111] rounded-t-[2.5rem] sm:rounded-t-[3rem] relative z-10 space-y-6 sm:space-y-8">
+              <form onSubmit={handleSubmit} className="p-4 sm:p-8 -mt-5 sm:-mt-8 bg-[#111] rounded-t-[1.5rem] sm:rounded-t-[3rem] relative z-10 space-y-4 sm:space-y-6">
                 {error && (
                   <motion.div 
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="p-5 bg-red-500/10 border border-red-500/30 rounded-3xl flex items-center gap-4 text-red-500 text-sm font-bold"
+                    className="p-4 bg-red-500/10 border border-red-500/30 rounded-2xl flex items-center gap-3 text-red-500 text-xs font-bold"
                   >
-                    <div className="bg-red-500 p-1.5 rounded-full">
-                       <AlertCircle className="w-4 h-4 text-white" />
+                    <div className="bg-red-500 p-1 rounded-full">
+                       <AlertCircle className="w-3.5 h-3.5 text-white" />
                     </div>
                     {error}
                   </motion.div>
                 )}
 
                 {/* Jersey Model Selection */}
-                <div className="space-y-4">
-                  <label className="text-[10px] uppercase font-black tracking-[0.3em] text-gray-500 pl-2">Escolha o Modelo</label>
+                <div className="space-y-2">
+                  <label className="text-[8px] uppercase font-black tracking-[0.3em] text-gray-400 pl-2">Modelo</label>
                   {jerseys.length === 0 ? (
-                    <div className="p-6 bg-white/5 border border-dashed border-white/10 rounded-2xl text-center">
-                      <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Nenhuma camisa disponível na vitrine no momento.</p>
+                    <div className="p-4 bg-white/5 border border-dashed border-white/10 rounded-2xl text-center">
+                      <p className="text-gray-500 text-[9px] font-black uppercase tracking-widest">Nenhum modelo disponível.</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none snap-x">
                       {jerseys.map(jersey => (
                         <button
                           key={jersey.id}
@@ -1466,21 +1458,21 @@ export default function App() {
                             setSelectedJerseyId(jersey.id);
                             setSelectedJerseyName(jersey.name);
                           }}
-                          className={`p-2 rounded-2xl border-2 transition-all group relative overflow-hidden ${
+                          className={`flex-none w-28 sm:w-32 p-1.5 rounded-xl border-2 transition-all group relative snap-start ${
                             selectedJerseyId === jersey.id
                               ? 'border-primary ring-2 ring-primary/20 bg-primary/5'
                               : 'border-white/10 hover:border-white/20 bg-white/2'
                           }`}
                         >
-                          <div className="aspect-square rounded-xl overflow-hidden mb-2">
+                          <div className="aspect-square rounded-lg overflow-hidden mb-1.5">
                             <img src={jersey.imageUrl} className="w-full h-full object-cover" alt={jersey.name} referrerPolicy="no-referrer" />
                           </div>
-                          <p className={`text-[9px] font-black uppercase tracking-tighter truncate ${selectedJerseyId === jersey.id ? 'text-primary' : 'text-gray-400'}`}>
+                          <p className={`text-[8px] font-black uppercase tracking-tighter truncate ${selectedJerseyId === jersey.id ? 'text-primary' : 'text-gray-500'}`}>
                             {jersey.name}
                           </p>
                           {selectedJerseyId === jersey.id && (
-                            <div className="absolute top-1 right-1 bg-primary p-0.5 rounded-full">
-                              <Check className="w-3 h-3 text-black" />
+                            <div className="absolute top-1 right-1 bg-primary p-0.5 rounded-full shadow-lg">
+                              <Check className="w-2.5 h-2.5 text-black" />
                             </div>
                           )}
                         </button>
@@ -1489,17 +1481,17 @@ export default function App() {
                   )}
                 </div>
 
-                <div className="space-y-4">
-                  <label className="text-[10px] uppercase font-black tracking-[0.3em] text-gray-500 pl-2">Para quem é esta camisa?</label>
-                  <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-2">
+                  <label className="text-[8px] uppercase font-black tracking-[0.3em] text-gray-400 pl-2">Para quem?</label>
+                  <div className="grid grid-cols-3 gap-2">
                     {(['Atleta', 'Familia', 'Amigo'] as const).map((type) => (
                       <button
                         key={type}
                         type="button"
                         onClick={() => setRecipientType(type)}
-                        className={`py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border-2 ${
+                        className={`py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border-2 ${
                           recipientType === type 
-                            ? 'bg-primary border-primary text-black' 
+                            ? 'bg-primary border-primary text-black shadow-lg shadow-primary/10' 
                             : 'bg-white/5 border-white/10 text-gray-500 hover:border-white/20'
                         }`}
                       >
@@ -1509,52 +1501,54 @@ export default function App() {
                   </div>
                 </div>
 
-                {recipientType !== 'Atleta' && (
-                   <motion.div 
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    className="space-y-3"
-                   >
-                    <label className="text-[10px] uppercase font-black tracking-[0.3em] text-gray-500 pl-2">Nome do Destinatário (Quem vai usar?)</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {recipientType !== 'Atleta' && (
+                    <motion.div 
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="space-y-1.5"
+                    >
+                      <label className="text-[8px] uppercase font-black tracking-[0.3em] text-gray-500 pl-2">Destinatário</label>
+                      <input
+                        type="text"
+                        required
+                        value={recipientName}
+                        onChange={(e) => setRecipientName(e.target.value)}
+                        placeholder="EX: JOÃO DA SILVA"
+                        className="w-full bg-white/5 border-2 border-white/10 rounded-xl px-4 py-3.5 focus:outline-none focus:border-primary focus:bg-white/10 transition-all font-black tracking-tight uppercase text-sm placeholder:text-gray-800"
+                      />
+                    </motion.div>
+                  )}
+
+                  <div className="space-y-1.5">
+                    <label className="text-[8px] uppercase font-black tracking-[0.3em] text-gray-500 pl-2">Responsável</label>
                     <input
                       type="text"
                       required
-                      value={recipientName}
-                      onChange={(e) => setRecipientName(e.target.value)}
-                      placeholder="EX: JOÃO DA SILVA"
-                      className="w-full bg-white/5 border-2 border-white/10 rounded-2xl px-6 py-5 focus:outline-none focus:border-primary focus:bg-white/10 transition-all font-black tracking-tight uppercase text-lg placeholder:text-gray-800"
+                      value={responsibleName}
+                      onChange={(e) => setResponsibleName(e.target.value)}
+                      placeholder="EX: FABIO SANTOS"
+                      className="w-full bg-white/5 border-2 border-white/10 rounded-xl px-4 py-3.5 focus:outline-none focus:border-primary focus:bg-white/10 transition-all font-black tracking-tight uppercase text-sm placeholder:text-gray-800"
                     />
-                  </motion.div>
-                )}
+                  </div>
 
-                <div className="space-y-3">
-                  <label className="text-[10px] uppercase font-black tracking-[0.3em] text-gray-500 pl-2">Responsável pela Reserva (Seu Nome)</label>
-                  <input
-                    type="text"
-                    required
-                    value={responsibleName}
-                    onChange={(e) => setResponsibleName(e.target.value)}
-                    placeholder="EX: FABIO SANTOS"
-                    className="w-full bg-white/5 border-2 border-white/10 rounded-2xl px-6 py-5 focus:outline-none focus:border-primary focus:bg-white/10 transition-all font-black tracking-tight uppercase text-lg placeholder:text-gray-800"
-                  />
+                  <div className="space-y-1.5">
+                    <label className="text-[8px] uppercase font-black tracking-[0.3em] text-gray-500 pl-2">Nome na Camisa</label>
+                    <input
+                      type="text"
+                      required
+                      maxLength={15}
+                      value={name}
+                      onChange={(e) => setName(e.target.value.toUpperCase())}
+                      placeholder="EX: JOGADOR"
+                      className="w-full bg-white/5 border-2 border-white/10 rounded-xl px-4 py-3.5 focus:outline-none focus:border-primary focus:bg-white/10 transition-all font-black tracking-tight uppercase text-sm placeholder:text-gray-800"
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-3">
-                  <label className="text-[10px] uppercase font-black tracking-[0.3em] text-gray-500 pl-2">Identificação (Nome na Camisa)</label>
-                  <input
-                    type="text"
-                    required
-                    maxLength={15}
-                    value={name}
-                    onChange={(e) => setName(e.target.value.toUpperCase())}
-                    placeholder="EX: JOGADOR"
-                    className="w-full bg-white/5 border-2 border-white/10 rounded-2xl px-6 py-5 focus:outline-none focus:border-primary focus:bg-white/10 transition-all font-black tracking-tight uppercase text-xl placeholder:text-gray-800"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <label className="text-[10px] uppercase font-black tracking-[0.3em] text-gray-500 pl-2">Número Alvo</label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-[8px] uppercase font-black tracking-[0.3em] text-gray-500 pl-2">Nº</label>
                     <input
                       type="number"
                       required
@@ -1563,51 +1557,61 @@ export default function App() {
                       value={number}
                       onChange={(e) => setNumber(e.target.value)}
                       placeholder="99"
-                      className="w-full bg-white/5 border-2 border-white/10 rounded-2xl px-6 py-5 focus:outline-none focus:border-primary focus:bg-white/10 transition-all font-black text-3xl placeholder:text-gray-800 italic"
+                      className="w-full bg-white/5 border-2 border-white/10 rounded-xl px-4 py-3.5 focus:outline-none focus:border-primary focus:bg-white/10 transition-all font-black text-xl placeholder:text-gray-800 italic"
                     />
                   </div>
-                  <div className="space-y-3">
-                    <label className="text-[10px] uppercase font-black tracking-[0.3em] text-gray-500 pl-2">Quantidade</label>
+                  <div className="space-y-1.5">
+                    <label className="text-[8px] uppercase font-black tracking-[0.3em] text-gray-500 pl-2">Qtd</label>
                     <select
                       value={quantity}
                       onChange={(e) => {
                         const val = parseInt(e.target.value);
                         setQuantity(isNaN(val) ? 1 : val);
                       }}
-                      className="w-full bg-white/5 border-2 border-white/10 rounded-2xl px-6 py-5 focus:outline-none focus:border-primary focus:bg-white/10 transition-all font-black text-xl appearance-none cursor-pointer"
+                      className="w-full bg-white/5 border-2 border-white/10 rounded-xl px-4 py-3.5 focus:outline-none focus:border-primary focus:bg-white/10 transition-all font-black text-sm appearance-none cursor-pointer"
                     >
                       {[1, 2, 3, 4, 5].map(q => <option key={q} value={q} className="bg-[#111]">{q} {q === 1 ? 'Camisa' : 'Camisas'}</option>)}
                     </select>
                   </div>
-                </div>
-
-                <div className="space-y-4">
-                  <label className="text-[10px] uppercase font-black tracking-[0.3em] text-gray-500 pl-2">Seleção de Tamanho</label>
-                  <div className="flex flex-wrap gap-3">
-                    {JERSEY_SIZES.map((s) => (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => setSize(s as any)}
-                        className={`flex-1 min-w-[60px] py-4 rounded-2xl text-sm font-black transition-all border-2 ${
-                          size === s 
-                            ? 'bg-primary border-primary text-black shadow-xl scale-105' 
-                            : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/30'
-                        }`}
-                      >
-                        {s}
-                      </button>
-                    ))}
+                  <div className="space-y-1.5 col-span-2 sm:col-span-1">
+                    <label className="text-[8px] uppercase font-black tracking-[0.3em] text-gray-500 pl-2">Tam</label>
+                    <div className="flex gap-2">
+                      {JERSEY_SIZES.map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => setSize(s as any)}
+                          className={`flex-1 py-3.5 rounded-xl text-[10px] font-black transition-all border-2 ${
+                            size === s 
+                              ? 'bg-primary border-primary text-black shadow-md' 
+                              : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20'
+                          }`}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={!siteConfig.isOpen && !isAdmin}
-                  className={`w-full ${siteConfig.isOpen || isAdmin ? 'bg-primary hover:opacity-90 shadow-xl' : 'bg-gray-800 text-gray-500 cursor-not-allowed'} text-black font-black py-6 rounded-[1.5rem] transition-all active:scale-95 uppercase tracking-tighter text-xl mt-4`}
-                >
-                  {editingRegistration ? 'SALVAR ALTERAÇÕES' : (siteConfig.isOpen || isAdmin ? 'CONFIRMAR E RESERVAR' : 'SISTEMA FECHADO')}
-                </button>
+                <div className="flex gap-3 pt-2">
+                   <button
+                    type="button"
+                    onClick={() => {
+                      setIsModalOpen(false);
+                      setEditingRegistration(null);
+                    }}
+                    className="flex-1 border-2 border-white/10 text-gray-500 hover:text-white hover:border-white/30 font-black py-4 rounded-2xl transition-all uppercase tracking-tighter text-xs"
+                  >
+                    DESCARTAR
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-[2] bg-primary hover:bg-primary/90 text-black font-black py-4 rounded-2xl transition-all shadow-xl shadow-primary/10 active:scale-95 uppercase tracking-tighter text-xs"
+                  >
+                    {editingRegistration ? 'ATUALIZAR RESERVA' : 'CONFIRMAR AGORA'}
+                  </button>
+                </div>
               </form>
             </motion.div>
           </div>
