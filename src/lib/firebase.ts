@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
@@ -8,4 +8,12 @@ export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
-export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
+export const signInWithGoogle = async () => {
+  try {
+    await setPersistence(auth, browserLocalPersistence);
+    return await signInWithPopup(auth, googleProvider);
+  } catch (error) {
+    console.error("Firebase Login Error:", error);
+    throw error;
+  }
+};

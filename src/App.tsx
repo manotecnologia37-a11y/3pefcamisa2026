@@ -170,8 +170,15 @@ export default function App() {
   const handleLogin = async () => {
     try {
       await signInWithGoogle();
-    } catch (err) {
-      setError("Erro ao fazer login. Tente novamente.");
+    } catch (err: any) {
+      console.error("Login attempt failed:", err);
+      if (err.code === 'auth/popup-closed-by-user') {
+        setError("O login foi cancelado ou fechou inesperadamente. Verifique se o seu navegador não bloqueou o pop-up.");
+      } else if (err.code === 'auth/network-request-failed') {
+        setError("Erro de rede ao tentar logar. Verifique sua conexão.");
+      } else {
+        setError(`Erro ao fazer login: ${err.message || "Tente novamente."}`);
+      }
     }
   };
 
