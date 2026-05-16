@@ -1,0 +1,82 @@
+{
+  "entities": {
+    "registration": {
+      "title": "Jersey Registration",
+      "description": "Information about a jersey reservation",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name printed on the jersey"
+        },
+        "number": {
+          "type": "string",
+          "description": "Number chosen for the jersey"
+        },
+        "size": {
+          "type": "string",
+          "enum": ["P", "M", "G", "GG", "XG"]
+        },
+        "quantity": {
+          "type": "number",
+          "description": "Amount of jerseys reserved"
+        },
+        "userId": {
+          "type": "string",
+          "description": "ID of the user who made the reservation"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Pendente", "Pago", "Entregue"]
+        },
+        "recipientType": {
+          "type": "string",
+          "description": "Category of the person getting the jersey",
+          "enum": ["Atleta", "Familia", "Amigo"]
+        },
+        "recipientName": {
+          "type": "string",
+          "description": "Optional name of the family member or friend"
+        },
+        "responsibleName": {
+          "type": "string",
+          "description": "The person responsible for the whole order/jersey"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["name", "number", "size", "quantity", "userId", "createdAt", "status"]
+    },
+    "siteConfig": {
+      "title": "Site Configuration",
+      "description": "Design and text settings for the site",
+      "type": "object",
+      "properties": {
+        "logoUrl": { "type": "string" },
+        "bannerUrl": { "type": "string" },
+        "heroTitle": { "type": "string" },
+        "heroSubtitle": { "type": "string" },
+        "seasonText": { "type": "string" },
+        "contactPhone": { "type": "string" },
+        "footerText": { "type": "string" },
+        "primaryColor": { "type": "string" },
+        "isOpen": { "type": "boolean" },
+        "siteName": { "type": "string" },
+        "siteNameHighlight": { "type": "string" },
+        "footerSlogan": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/registrations/{registrationId}": {
+      "schema": "registration",
+      "description": "Collection of all jersey registrations"
+    },
+    "/configs/{configId}": {
+      "schema": "siteConfig",
+      "description": "Site-wide configuration settings"
+    }
+  }
+}

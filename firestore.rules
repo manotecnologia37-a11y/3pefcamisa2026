@@ -1,0 +1,69 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      // In production, you would check a collection or custom claims.
+      // For this implementation, we check against a hardcoded list in the rules as well.
+      return request.auth.token.email in ['fanux.br@gmail.com'];
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidRegistration(data, isUpdate) {
+      let baseValid = data.name is string && data.name.size() > 0 && data.name.size() <= 50
+        && data.number is string && data.number.size() > 0 && data.number.size() <= 3
+        && data.size in ['P', 'M', 'G', 'GG', 'XG']
+        && data.quantity is int && data.quantity >= 1 && data.quantity <= 10
+        && data.status in ['Pendente', 'Pago', 'Entregue']
+        && data.recipientType in ['Atleta', 'Familia', 'Amigo']
+        && data.recipientName is string
+        && data.responsibleName is string && data.responsibleName.size() > 0 && data.responsibleName.size() <= 100
+        && data.userId == (isUpdate ? existing().userId : request.auth.uid);
+      
+      return isUpdate 
+        ? baseValid && data.keys().hasAll(['createdAt', 'updatedAt']) && data.createdAt == existing().createdAt && data.updatedAt == request.time
+        : baseValid && data.keys().size() == 10 && data.createdAt == request.time;
+    }
+
+    match /registrations/{number} {
+      allow read: if true;
+      
+      allow create: if isSignedIn() 
+        && isValidId(number)
+        && number == incoming().number
+        && !exists(/databases/$(database)/documents/registrations/$(number))
+        && isValidRegistration(incoming(), false);
+
+      allow delete: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow update: if isSignedIn() && (
+        isAdmin() || 
+        (existing().userId == request.auth.uid && isValidRegistration(incoming(), true))
+      );
+    }
+
+    match /configs/{configId} {
+      allow read: if true;
+      allow write: if isSignedIn() && isAdmin();
+    }
+  }
+}
