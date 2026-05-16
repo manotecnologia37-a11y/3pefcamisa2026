@@ -88,6 +88,18 @@
         "price": { "type": "string" }
       },
       "required": ["name", "imageUrl"]
+    },
+    "sponsor": {
+      "title": "Sponsor",
+      "description": "Information about a sponsor",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "imageUrl": { "type": "string", "description": "Optional image URL. If missing, show name." },
+        "order": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "order"]
     }
   },
   "firestore": {
@@ -102,6 +114,10 @@
     "/jerseys/{jerseyId}": {
       "schema": "jerseyDesign",
       "description": "Collection of jersey designs for the showcase"
+    },
+    "/sponsors/{sponsorId}": {
+      "schema": "sponsor",
+      "description": "Collection of team sponsors"
     }
   }
 }

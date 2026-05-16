@@ -38,11 +38,12 @@ service cloud.firestore {
         && data.recipientType in ['Atleta', 'Familia', 'Amigo']
         && data.recipientName is string
         && data.responsibleName is string && data.responsibleName.size() > 0 && data.responsibleName.size() <= 100
+        && data.jerseyId is string && data.jerseyName is string
         && data.userId == (isUpdate ? existing().userId : request.auth.uid);
       
       return isUpdate 
         ? baseValid && data.keys().hasAll(['createdAt', 'updatedAt']) && data.createdAt == existing().createdAt && data.updatedAt == request.time
-        : baseValid && data.keys().size() == 10 && data.createdAt == request.time;
+        : baseValid && data.keys().size() == 12 && data.createdAt == request.time;
     }
 
     match /registrations/{number} {
@@ -67,6 +68,11 @@ service cloud.firestore {
     }
 
     match /jerseys/{jerseyId} {
+      allow read: if true;
+      allow write: if isSignedIn() && isAdmin();
+    }
+
+    match /sponsors/{sponsorId} {
       allow read: if true;
       allow write: if isSignedIn() && isAdmin();
     }

@@ -1,4 +1,4 @@
-import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
+import { useState, useEffect, FormEvent, ChangeEvent, MouseEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Trophy, Users, Star, Plus, X, Phone, Check, AlertCircle, LogIn, LogOut, Settings, Download, Camera, Trash2, Edit2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { 
@@ -94,6 +94,13 @@ interface JerseyDesign {
   price?: string;
 }
 
+interface Sponsor {
+  id: string;
+  name: string;
+  imageUrl?: string;
+  order: number;
+}
+
 const DEFAULT_CONFIG: SiteConfig = {
   logoUrl: '',
   bannerUrl: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=2693&auto=format&fit=crop',
@@ -114,6 +121,7 @@ const JERSEY_SIZES = ['P', 'M', 'G', 'GG', 'XG'];
 export default function App() {
   const [registrations, setRegistrations] = useState<JerseyRegistration[]>([]);
   const [jerseys, setJerseys] = useState<JerseyDesign[]>([]);
+  const [sponsors, setSponsors] = useState<Sponsor[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -122,7 +130,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [siteConfig, setSiteConfig] = useState<SiteConfig>(DEFAULT_CONFIG);
-  const [activeAdminTab, setActiveAdminTab] = useState<'design' | 'textos' | 'vitrine' | 'stats' | 'reservas'>('design');
+  const [activeAdminTab, setActiveAdminTab] = useState<'design' | 'textos' | 'vitrine' | 'patrocinadores' | 'stats' | 'reservas'>('design');
 
   // Admin Config Form State
   const [configForm, setConfigForm] = useState<SiteConfig>(DEFAULT_CONFIG);
@@ -146,6 +154,14 @@ export default function App() {
     description: '',
     order: 0,
     price: ''
+  });
+
+  // Sponsors Admin State
+  const [editingSponsor, setEditingSponsor] = useState<Sponsor | null>(null);
+  const [sponsorForm, setSponsorForm] = useState<Omit<Sponsor, 'id'>>({
+    name: '',
+    imageUrl: '',
+    order: 0
   });
 
   // Auth Listener
@@ -206,6 +222,23 @@ export default function App() {
     }, (err) => {
       console.error("Erro ao carregar vitrine:", err);
       // Não lançamos erro aqui para não travar o app se a coleção estiver vazia ou com problema de permissão temporário
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Sponsors Listener
+  useEffect(() => {
+    const q = query(collection(db, 'sponsors'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Sponsor[];
+      const sortedData = data.sort((a, b) => (a.order || 0) - (b.order || 0));
+      setSponsors(sortedData);
+    }, (err) => {
+      console.error("Erro ao carregar patrocinadores:", err);
     });
 
     return () => unsubscribe();
@@ -390,8 +423,8 @@ export default function App() {
     }
   };
 
-  const handleSaveJersey = async (e: FormEvent) => {
-    e.preventDefault();
+  const handleSaveJersey = async (e?: FormEvent | MouseEvent) => {
+    if (e) e.preventDefault();
     if (!isAdmin) return;
     setAdminError(null);
 
@@ -400,6 +433,7 @@ export default function App() {
       return;
     }
 
+    setIsLoading(true);
     try {
       if (editingJersey) {
         await updateDoc(doc(db, 'jerseys', editingJersey.id), {
@@ -416,18 +450,93 @@ export default function App() {
       setEditingJersey(null);
       setJerseyForm({ name: '', imageUrl: '', description: '', order: jerseys.length + 1, price: '' });
     } catch (err: any) {
+      console.error("Error saving jersey:", err);
       handleFirestoreError(err, OperationType.WRITE, 'jerseys');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const removeJersey = async (id: string) => {
     if (!isAdmin) return;
-    if (!confirm("Tem certeza que deseja remover esta camisa da vitrine?")) return;
+    setAdminError(null);
+    setIsLoading(true);
     try {
       await deleteDoc(doc(db, 'jerseys', id));
-    } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, `jerseys/${id}`);
+    } catch (err: any) {
+      console.error("Error removing jersey:", err);
+      setAdminError("Erro ao remover camisa: " + err.message);
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  const handleSaveSponsor = async (e?: FormEvent | MouseEvent) => {
+    if (e) e.preventDefault();
+    if (!isAdmin) return;
+    setAdminError(null);
+
+    if (!sponsorForm.name) {
+      setAdminError("O nome do patrocinador é obrigatório.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      if (editingSponsor) {
+        await updateDoc(doc(db, 'sponsors', editingSponsor.id), {
+          ...sponsorForm,
+          updatedAt: serverTimestamp()
+        });
+      } else {
+        const newDocRef = doc(collection(db, 'sponsors'));
+        await setDoc(newDocRef, {
+          ...sponsorForm,
+          createdAt: serverTimestamp()
+        });
+      }
+      setEditingSponsor(null);
+      setSponsorForm({ name: '', imageUrl: '', order: sponsors.length + 1 });
+    } catch (err: any) {
+      console.error("Error saving sponsor:", err);
+      setAdminError("Erro ao salvar patrocinador: " + err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const removeSponsor = async (id: string) => {
+    if (!isAdmin) return;
+    setAdminError(null);
+    setIsLoading(true);
+    try {
+      await deleteDoc(doc(db, 'sponsors', id));
+    } catch (err: any) {
+      console.error("Error removing sponsor:", err);
+      setAdminError("Erro ao remover patrocinador: " + err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSponsorImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setAdminError(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 512000) {
+      setAdminError(`A imagem é muito pesada (${(file.size/1024).toFixed(0)}KB). Use imagens menores que 500KB.`);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadstart = () => setIsLoading(true);
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      setSponsorForm(prev => ({ ...prev, imageUrl: base64String }));
+      setIsLoading(false);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleJerseyImageChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -619,8 +728,38 @@ export default function App() {
         </div>
       </section>
 
+      {/* Sponsors Section */}
+      {sponsors.length > 0 && (
+        <div className="bg-[#0a0a0a] border-y border-white/5 py-10 sm:py-16 overflow-hidden relative z-20">
+          <div className="max-w-7xl mx-auto px-4 mb-8 sm:mb-12">
+            <h3 className="text-[10px] sm:text-xs font-black uppercase tracking-[0.4em] text-primary/40 text-center italic">
+              Nossos Patrocinadores
+            </h3>
+          </div>
+          <motion.div 
+            className="flex items-center gap-16 sm:gap-24 whitespace-nowrap"
+            animate={{ x: ["0%", "-50%"] }}
+            transition={{ 
+              repeat: Infinity, 
+              duration: sponsors.length * 4 + 20, 
+              ease: "linear" 
+            }}
+          >
+            {[...sponsors, ...sponsors, ...sponsors].map((sponsor, i) => (
+              <div key={`${sponsor.id}-${i}`} className="flex-shrink-0 flex items-center gap-4 grayscale opacity-30 hover:grayscale-0 hover:opacity-100 transition-all duration-500 cursor-default">
+                {sponsor.imageUrl ? (
+                  <img src={sponsor.imageUrl} alt={sponsor.name} className="h-10 sm:h-16 w-auto max-w-[150px] sm:max-w-[200px] object-contain" referrerPolicy="no-referrer" />
+                ) : (
+                  <span className="font-black italic text-xl sm:text-3xl text-white/20 tracking-tighter uppercase">{sponsor.name}</span>
+                )}
+              </div>
+            ))}
+          </motion.div>
+        </div>
+      )}
+
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 -mt-10 relative z-30">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 relative z-30">
         <div className="flex flex-col gap-20 sm:gap-32">
           
           {/* Showcase (Vitrine) */}
@@ -898,6 +1037,12 @@ export default function App() {
                         className={`flex-1 sm:flex-none px-4 sm:px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeAdminTab === 'vitrine' ? 'bg-primary text-black' : 'hover:bg-white/5 text-gray-500'}`}
                       >
                         Vitrine
+                      </button>
+                      <button 
+                        onClick={() => setActiveAdminTab('patrocinadores')}
+                        className={`flex-1 sm:flex-none px-4 sm:px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeAdminTab === 'patrocinadores' ? 'bg-primary text-black' : 'hover:bg-white/5 text-gray-500'}`}
+                      >
+                        Patrocinadores
                       </button>
                       <button 
                         onClick={() => setActiveAdminTab('stats')}
@@ -1202,7 +1347,7 @@ export default function App() {
                             <div key={j.id} className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden group">
                               <div className="aspect-[4/5] relative">
                                 <img src={j.imageUrl} className="w-full h-full object-cover" alt={j.name} referrerPolicy="no-referrer" />
-                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                                <div className="absolute inset-x-0 bottom-0 bg-black/80 p-3 flex items-center justify-center gap-4 border-t border-white/10">
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -1214,23 +1359,181 @@ export default function App() {
                                         order: j.order || 0,
                                         price: j.price || ''
                                       });
+                                      // Scroll form into view
+                                      window.scrollTo({ top: 0, behavior: 'smooth' });
                                     }}
-                                    className="p-3 bg-primary text-black rounded-full hover:scale-110 active:scale-90 transition-all shadow-lg"
+                                    className="p-2.5 bg-primary text-black rounded-xl hover:scale-110 active:scale-95 transition-all shadow-lg flex items-center gap-2"
                                   >
                                     <Edit2 className="w-4 h-4" />
+                                    <span className="text-[9px] font-black uppercase tracking-tighter sm:inline hidden">Editar</span>
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={() => removeJersey(j.id)}
-                                    className="p-3 bg-red-500 text-white rounded-full hover:scale-110 active:scale-90 transition-all shadow-lg"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      removeJersey(j.id);
+                                    }}
+                                    className="p-2.5 bg-red-500 text-white rounded-xl hover:scale-110 active:scale-95 transition-all shadow-lg flex items-center gap-2"
                                   >
                                     <Trash2 className="w-4 h-4" />
+                                    <span className="text-[9px] font-black uppercase tracking-tighter sm:inline hidden">Excluir</span>
                                   </button>
                                 </div>
                               </div>
                               <div className="p-4">
                                 <p className="text-[10px] font-black uppercase truncate">{j.name}</p>
                                 <p className="text-[8px] text-primary font-bold mt-1">Ordem: {j.order}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+
+                {activeAdminTab === 'patrocinadores' && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="space-y-10"
+                  >
+                    <div className="bg-primary/5 border border-primary/20 p-8 rounded-[2.5rem] space-y-6">
+                      <div className="flex items-center gap-4 mb-2">
+                        <Users className="w-6 h-6 text-primary" />
+                        <h4 className="text-xl font-black uppercase italic tracking-tight">{editingSponsor ? 'Editar Patrocinador' : 'Adicionar Patrocinador'}</h4>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-3">
+                          <label className="text-[10px] uppercase font-black tracking-[0.3em] text-gray-500 pl-2">Nome da Empresa</label>
+                          <input
+                            type="text"
+                            value={sponsorForm.name}
+                            onChange={(e) => setSponsorForm({...sponsorForm, name: e.target.value.toUpperCase()})}
+                            className="w-full bg-black/40 border-2 border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:border-primary transition-all font-black text-sm"
+                            placeholder="EX: ACME CORP"
+                          />
+                        </div>
+                        <div className="space-y-3">
+                          <label className="text-[10px] uppercase font-black tracking-[0.3em] text-gray-500 pl-2">Ordem</label>
+                          <input
+                            type="number"
+                            value={sponsorForm.order}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value);
+                              setSponsorForm({...sponsorForm, order: isNaN(val) ? 0 : val});
+                            }}
+                            className="w-full bg-black/40 border-2 border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:border-primary transition-all font-black text-sm"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-4">
+                        <label className="text-[10px] uppercase font-black tracking-[0.3em] text-gray-500 pl-2">Logo (Opcional - se não tiver, exibirá o nome)</label>
+                        <div className="flex flex-col gap-4">
+                          <div className="h-32 bg-black/40 border-2 border-dashed border-white/20 rounded-3xl flex items-center justify-center overflow-hidden">
+                            {sponsorForm.imageUrl ? (
+                              <img src={sponsorForm.imageUrl} className="max-h-[80%] max-w-[80%] object-contain" alt="Preview Sponsor" referrerPolicy="no-referrer" />
+                            ) : (
+                              <div className="text-center">
+                                <Camera className="w-8 h-8 text-gray-800 mx-auto mb-1" />
+                                <span className="text-[10px] text-gray-700 font-bold uppercase">Sem Logo</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex gap-4">
+                            <input type="file" accept="image/*" onChange={handleSponsorImageChange} className="hidden" id="sponsor-upload" />
+                            <label htmlFor="sponsor-upload" className="flex-1 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 py-4 rounded-xl text-center text-[10px] font-black uppercase tracking-widest cursor-pointer transition-all">
+                              Upload Logo
+                            </label>
+                            {sponsorForm.imageUrl && (
+                              <button 
+                                type="button" 
+                                onClick={() => setSponsorForm({...sponsorForm, imageUrl: ''})}
+                                className="px-6 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl hover:bg-red-500/20 transition-all"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-4 pt-4">
+                        <button
+                          type="button"
+                          onClick={handleSaveSponsor}
+                          className="flex-1 bg-primary text-black font-black py-4 rounded-2xl shadow-xl hover:opacity-90 active:scale-95 transition-all uppercase tracking-tighter"
+                        >
+                          {editingSponsor ? 'Atualizar' : 'Adicionar'}
+                        </button>
+                        {editingSponsor && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingSponsor(null);
+                              setSponsorForm({ name: '', imageUrl: '', order: sponsors.length + 1 });
+                            }}
+                            className="flex-1 bg-white/5 text-gray-400 font-black py-4 rounded-2xl border border-white/10 hover:bg-white/10 transition-all uppercase tracking-tighter"
+                          >
+                            Cancelar
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-6">
+                      <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500">Patrocinadores Atuais</h4>
+                      {sponsors.length === 0 ? (
+                        <div className="bg-white/5 border border-dashed border-white/10 rounded-3xl p-10 text-center">
+                          <Users className="w-8 h-8 text-gray-800 mx-auto mb-2 opacity-20" />
+                          <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">Nenhum patrocinador cadastrado</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 gap-3">
+                          {sponsors.map(s => (
+                            <div key={s.id} className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between group">
+                              <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 bg-black/40 rounded-lg flex items-center justify-center overflow-hidden border border-white/5">
+                                  {s.imageUrl ? (
+                                    <img src={s.imageUrl} className="w-full h-full object-contain" alt={s.name} referrerPolicy="no-referrer" />
+                                  ) : (
+                                    <span className="text-[10px] font-black text-primary">{s.name.charAt(0)}</span>
+                                  )}
+                                </div>
+                                <div>
+                                  <p className="text-[11px] font-black uppercase tracking-tight italic">{s.name}</p>
+                                  <p className="text-[9px] text-gray-500 font-bold">ORDEM: {s.order}</p>
+                                </div>
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingSponsor(s);
+                                    setSponsorForm({
+                                      name: s.name,
+                                      imageUrl: s.imageUrl || '',
+                                      order: s.order
+                                    });
+                                  }}
+                                  className="p-2 bg-primary/10 text-primary rounded-lg hover:bg-primary transition-all hover:text-black"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    console.log("Removing sponsor:", s.id);
+                                    removeSponsor(s.id);
+                                  }}
+                                  className="p-3 bg-red-500/20 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all transform active:scale-90"
+                                  title="Remover Patrocinador"
+                                >
+                                  <Trash2 className="w-5 h-5" />
+                                </button>
                               </div>
                             </div>
                           ))}
