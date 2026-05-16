@@ -189,15 +189,19 @@ export default function App() {
 
   // Jerseys Listener
   useEffect(() => {
-    const q = query(collection(db, 'jerseys'), orderBy('order', 'asc'));
+    // Verificando se a coleção existe e removendo orderBy temporariamente para evitar erros de índice não criado
+    const q = query(collection(db, 'jerseys')); 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as JerseyDesign[];
-      setJerseys(data);
+      // Ordenação manual no cliente para evitar necessidade de índices compostos imediatos
+      const sortedData = data.sort((a, b) => (a.order || 0) - (b.order || 0));
+      setJerseys(sortedData);
     }, (err) => {
-      handleFirestoreError(err, OperationType.LIST, 'jerseys');
+      console.error("Erro ao carregar vitrine:", err);
+      // Não lançamos erro aqui para não travar o app se a coleção estiver vazia ou com problema de permissão temporário
     });
 
     return () => unsubscribe();
@@ -571,21 +575,28 @@ export default function App() {
             
             <button
                onClick={() => {
-                 if (!siteConfig.isOpen && !isAdmin) return;
+                 setNumber('');
+                 setName('');
+                 setRecipientName('');
+                 setResponsibleName('');
                  currentUser ? setIsModalOpen(true) : handleLogin();
                }}
                disabled={!siteConfig.isOpen && !isAdmin}
-               className={`${(siteConfig.isOpen || isAdmin) ? 'bg-primary hover:bg-primary/90 shadow-xl hover:scale-105' : 'bg-gray-800 text-gray-500 cursor-not-allowed'} text-black font-black py-4 sm:py-5 px-8 sm:px-14 rounded-2xl flex items-center gap-2 sm:gap-3 transition-all active:scale-95 group uppercase tracking-tight text-xs sm:text-lg`}
+               className={`${(siteConfig.isOpen || isAdmin) ? 'bg-primary hover:bg-primary/90 shadow-2xl hover:shadow-primary/20 hover:scale-105 active:scale-95' : 'bg-gray-800 text-gray-500 cursor-not-allowed'} px-10 py-6 rounded-3xl flex items-center gap-4 transition-all group z-30`}
             >
                {(siteConfig.isOpen || isAdmin) ? (
                  <>
-                   <Plus className="w-5 h-5 sm:w-6 sm:h-6 group-hover:rotate-90 transition-transform" />
-                   {currentUser ? 'FAZER MINHA RESERVA' : 'ENTRE PARA RESERVAR'}
+                   <div className="bg-black/10 p-2 rounded-xl group-hover:bg-black/20 transition-colors">
+                    <Plus className="w-6 h-6 text-black group-hover:rotate-90 transition-transform" />
+                   </div>
+                   <span className="text-black font-black text-lg uppercase tracking-widest italic">
+                     {currentUser ? 'FAZER MINHA RESERVA' : 'ENTRE PARA RESERVAR'}
+                   </span>
                  </>
                ) : (
                  <>
-                   <X className="w-5 h-5 sm:w-6 sm:h-6" />
-                   SISTEMA FECHADO
+                   <X className="w-6 h-6" />
+                   <span className="font-black text-lg uppercase tracking-widest italic text-gray-500">SISTEMA FECHADO</span>
                  </>
                )}
             </button>
@@ -598,8 +609,8 @@ export default function App() {
         <div className="flex flex-col gap-12">
           
           {/* Showcase (Vitrine) */}
-          {jerseys.length > 0 && (
-            <section className="space-y-8">
+          {(jerseys.length > 0 || isAdmin) && (
+            <section className="space-y-8 min-h-[100px]">
               <div className="text-center">
                 <h2 className="text-3xl sm:text-5xl font-black uppercase tracking-tighter italic flex items-center justify-center gap-3">
                   VITRINE DE <span className="text-primary">GLÓRIA</span>
@@ -607,53 +618,62 @@ export default function App() {
                 <div className="w-24 h-1 bg-primary mx-auto mt-4 rounded-full" />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-                {jerseys.map((jersey, idx) => (
-                  <motion.div
-                    key={jersey.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.1 }}
-                    className="group relative bg-[#111] border border-[#1a3b32] rounded-[2.5rem] overflow-hidden shadow-2xl hover:border-primary/40 transition-all hover:-translate-y-2"
-                  >
-                    <div className="aspect-[4/5] overflow-hidden relative">
-                      <img 
-                        src={jersey.imageUrl} 
-                        alt={jersey.name}
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                        referrerPolicy="no-referrer"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60" />
-                      
-                      {jersey.price && (
-                        <div className="absolute top-6 right-6 bg-primary text-black font-black px-4 py-2 rounded-xl text-sm shadow-xl italic">
-                          {jersey.price}
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="p-8">
-                      <h3 className="text-2xl font-black uppercase italic tracking-tight mb-2 group-hover:text-primary transition-colors">
-                        {jersey.name}
-                      </h3>
-                      {jersey.description && (
-                        <p className="text-gray-500 text-sm font-medium leading-relaxed italic line-clamp-2">
-                          {jersey.description}
-                        </p>
-                      )}
-                      
-                      <div className="mt-6 flex items-center justify-between">
-                        <div className="flex gap-1">
-                          {[1, 2, 3, 4, 5].map(star => (
-                            <Star key={star} className="w-3 h-3 text-primary fill-primary" />
-                          ))}
-                        </div>
-                        <span className="text-[10px] font-black uppercase text-primary/50 tracking-widest">Modelo Oficial</span>
+              {jerseys.length === 0 ? (
+                <div className="bg-white/5 border border-dashed border-white/10 rounded-[2.5rem] p-12 text-center max-w-4xl mx-auto">
+                   <Star className="w-10 h-10 text-gray-800 mx-auto mb-4 opacity-30" />
+                   <p className="text-gray-500 font-black uppercase tracking-widest text-xs italic">
+                     {isAdmin ? "Admin: Adicione itens na vitrine pelo painel de controle." : "Em breve, novos modelos serão revelados."}
+                   </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+                  {jerseys.map((jersey, idx) => (
+                    <motion.div
+                      key={jersey.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.1 }}
+                      className="group relative bg-[#111] border border-[#1a3b32] rounded-[2.5rem] overflow-hidden shadow-2xl hover:border-primary/40 transition-all hover:-translate-y-2"
+                    >
+                      <div className="aspect-[4/5] overflow-hidden relative">
+                        <img 
+                          src={jersey.imageUrl} 
+                          alt={jersey.name}
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60" />
+                        
+                        {jersey.price && (
+                          <div className="absolute top-6 right-6 bg-primary text-black font-black px-4 py-2 rounded-xl text-sm shadow-xl italic">
+                            {jersey.price}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
+                      
+                      <div className="p-8">
+                        <h3 className="text-2xl font-black uppercase italic tracking-tight mb-2 group-hover:text-primary transition-colors">
+                          {jersey.name}
+                        </h3>
+                        {jersey.description && (
+                          <p className="text-gray-500 text-sm font-medium leading-relaxed italic line-clamp-2">
+                            {jersey.description}
+                          </p>
+                        )}
+                        
+                        <div className="mt-6 flex items-center justify-between">
+                          <div className="flex gap-1">
+                            {[1, 2, 3, 4, 5].map(star => (
+                              <Star key={star} className="w-3 h-3 text-primary fill-primary" />
+                            ))}
+                          </div>
+                          <span className="text-[10px] font-black uppercase text-primary/50 tracking-widest">Modelo Oficial</span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
             </section>
           )}
 
@@ -1160,47 +1180,47 @@ export default function App() {
                         </div>
                       ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                        {jerseys.map(j => (
-                          <div key={j.id} className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden group">
-                            <div className="aspect-[4/5] relative">
-                              <img src={j.imageUrl} className="w-full h-full object-cover" alt={j.name} referrerPolicy="no-referrer" />
-                              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setEditingJersey(j);
-                                    setJerseyForm({
-                                      name: j.name,
-                                      imageUrl: j.imageUrl,
-                                      description: j.description || '',
-                                      order: j.order || 0,
-                                      price: j.price || ''
-                                    });
-                                  }}
-                                  className="p-3 bg-primary text-black rounded-full hover:scale-110 active:scale-90 transition-all shadow-lg"
-                                >
-                                  <Edit2 className="w-4 h-4" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => removeJersey(j.id)}
-                                  className="p-3 bg-red-500 text-white rounded-full hover:scale-110 active:scale-90 transition-all shadow-lg"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
+                          {jerseys.map(j => (
+                            <div key={j.id} className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden group">
+                              <div className="aspect-[4/5] relative">
+                                <img src={j.imageUrl} className="w-full h-full object-cover" alt={j.name} referrerPolicy="no-referrer" />
+                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingJersey(j);
+                                      setJerseyForm({
+                                        name: j.name,
+                                        imageUrl: j.imageUrl,
+                                        description: j.description || '',
+                                        order: j.order || 0,
+                                        price: j.price || ''
+                                      });
+                                    }}
+                                    className="p-3 bg-primary text-black rounded-full hover:scale-110 active:scale-90 transition-all shadow-lg"
+                                  >
+                                    <Edit2 className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeJersey(j.id)}
+                                    className="p-3 bg-red-500 text-white rounded-full hover:scale-110 active:scale-90 transition-all shadow-lg"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="p-4">
+                                <p className="text-[10px] font-black uppercase truncate">{j.name}</p>
+                                <p className="text-[8px] text-primary font-bold mt-1">Ordem: {j.order}</p>
                               </div>
                             </div>
-                            <div className="p-4">
-                              <p className="text-[10px] font-black uppercase truncate">{j.name}</p>
-                              <p className="text-[8px] text-primary font-bold mt-1">Ordem: {j.order}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              )}
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
 
                 {activeAdminTab === 'stats' && (
                   <motion.div 
