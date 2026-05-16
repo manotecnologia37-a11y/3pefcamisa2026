@@ -65,6 +65,8 @@ interface JerseyRegistration {
   recipientType: 'Atleta' | 'Familia' | 'Amigo';
   recipientName?: string;
   responsibleName: string;
+  jerseyId: string;
+  jerseyName: string;
   createdAt: any;
 }
 
@@ -133,6 +135,8 @@ export default function App() {
   const [recipientType, setRecipientType] = useState<'Atleta' | 'Familia' | 'Amigo'>('Atleta');
   const [recipientName, setRecipientName] = useState('');
   const [responsibleName, setResponsibleName] = useState('');
+  const [selectedJerseyId, setSelectedJerseyId] = useState('');
+  const [selectedJerseyName, setSelectedJerseyName] = useState('');
 
   // Jersey Showcase Admin State
   const [editingJersey, setEditingJersey] = useState<JerseyDesign | null>(null);
@@ -246,8 +250,8 @@ export default function App() {
       return;
     }
 
-    if (!name || !number) {
-      setError("Por favor, preencha todos os campos.");
+    if (!name || !number || !selectedJerseyId) {
+      setError("Por favor, preencha todos os campos, incluindo o modelo da camisa.");
       return;
     }
 
@@ -255,8 +259,6 @@ export default function App() {
       if (editingRegistration) {
         // If number changed, we need to delete the old document and create a new one 
         // since the ID is the number in this implementation? 
-        // Wait, line 199: doc(db, 'registrations', number)
-        // If number changed, we must delete the old one.
         if (editingRegistration.number !== number) {
           await deleteDoc(doc(db, 'registrations', editingRegistration.number));
         }
@@ -269,6 +271,8 @@ export default function App() {
           recipientType,
           recipientName: recipientType === 'Atleta' ? '' : recipientName,
           responsibleName,
+          jerseyId: selectedJerseyId,
+          jerseyName: selectedJerseyName,
           userId: editingRegistration.userId,
           status: editingRegistration.status || 'Pendente',
           createdAt: editingRegistration.createdAt || serverTimestamp(),
@@ -283,6 +287,8 @@ export default function App() {
           recipientType,
           recipientName: recipientType === 'Atleta' ? '' : recipientName,
           responsibleName,
+          jerseyId: selectedJerseyId,
+          jerseyName: selectedJerseyName,
           userId: currentUser.uid,
           status: 'Pendente',
           createdAt: serverTimestamp()
@@ -298,6 +304,8 @@ export default function App() {
       setRecipientType('Atleta');
       setRecipientName('');
       setResponsibleName('');
+      setSelectedJerseyId('');
+      setSelectedJerseyName('');
     } catch (err) {
       if (err instanceof Error && err.message.includes('permission-denied')) {
         setError("Erro de permissão ou número já reservado.");
@@ -324,6 +332,8 @@ export default function App() {
     setRecipientType(reg.recipientType || 'Atleta');
     setRecipientName(reg.recipientName || '');
     setResponsibleName(reg.responsibleName || '');
+    setSelectedJerseyId(reg.jerseyId || '');
+    setSelectedJerseyName(reg.jerseyName || '');
     setIsModalOpen(true);
   };
 
@@ -441,16 +451,17 @@ export default function App() {
   };
 
   const exportToCSV = () => {
-    const headers = ['Nome da camisa', 'Numero', 'Responsável', 'Para', 'Tamanho', 'Quantidade', 'Status', 'Usuario'];
+    const headers = ['Nome da camisa', 'Modelo', 'Numero', 'Responsável', 'Para', 'Tamanho', 'Quantidade', 'Status', 'Usuario'];
     const rows = registrations.map(r => [
-      r.name,
-      r.number,
-      r.responsibleName,
-      r.recipientType === 'Atleta' ? 'Para Mim' : (r.recipientName || (r.recipientType === 'Familia' ? 'Família' : r.recipientType)),
-      r.size,
+      `"${r.name}"`,
+      `"${r.jerseyName || 'Padrão'}"`,
+      `"${r.number}"`,
+      `"${r.responsibleName}"`,
+      `"${r.recipientType === 'Atleta' ? 'Para Mim' : (r.recipientName || (r.recipientType === 'Familia' ? 'Família' : r.recipientType))}"`,
+      `"${r.size}"`,
       r.quantity,
-      r.status,
-      r.userId
+      `"${r.status}"`,
+      `"${r.userId}"`
     ]);
 
     const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
@@ -740,6 +751,9 @@ export default function App() {
                                      <td className="px-4 sm:px-8 py-3">
                                         <h4 className="text-base sm:text-lg font-black uppercase tracking-tight italic leading-tight">{reg.name}</h4>
                                         <div className="flex flex-wrap gap-2 mt-0.5">
+                                          <span className="text-[8px] bg-primary text-black px-1.5 py-0.5 rounded-full font-bold uppercase tracking-widest border border-primary/20 shrink-0">
+                                            {reg.jerseyName}
+                                          </span>
                                           {currentUser?.uid === reg.userId && (
                                              <span className="text-[8px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-bold uppercase tracking-widest border border-primary/20 shrink-0">Sua Reserva</span>
                                           )}
@@ -1295,6 +1309,7 @@ export default function App() {
                           <thead>
                             <tr className="bg-white/5 font-black uppercase tracking-widest text-gray-500">
                               <th className="px-6 py-4">Nº</th>
+                              <th className="px-6 py-4">Modelo</th>
                               <th className="px-6 py-4">Nome (Camisa)</th>
                               <th className="px-6 py-4">Responsável</th>
                               <th className="px-6 py-4">Situação</th>
@@ -1305,6 +1320,7 @@ export default function App() {
                             {registrations.map(reg => (
                               <tr key={reg.id} className="hover:bg-white/[0.02]">
                                 <td className="px-6 py-4 font-black text-primary">{reg.number}</td>
+                                <td className="px-6 py-4 font-bold text-[9px] text-gray-400 italic uppercase">{reg.jerseyName}</td>
                                 <td className="px-6 py-4 font-bold uppercase">{reg.name}</td>
                                 <td className="px-6 py-4 font-medium text-gray-400 capitalize">{reg.responsibleName}</td>
                                 <td className="px-6 py-4">
@@ -1432,6 +1448,46 @@ export default function App() {
                     {error}
                   </motion.div>
                 )}
+
+                {/* Jersey Model Selection */}
+                <div className="space-y-4">
+                  <label className="text-[10px] uppercase font-black tracking-[0.3em] text-gray-500 pl-2">Escolha o Modelo</label>
+                  {jerseys.length === 0 ? (
+                    <div className="p-6 bg-white/5 border border-dashed border-white/10 rounded-2xl text-center">
+                      <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Nenhuma camisa disponível na vitrine no momento.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3">
+                      {jerseys.map(jersey => (
+                        <button
+                          key={jersey.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedJerseyId(jersey.id);
+                            setSelectedJerseyName(jersey.name);
+                          }}
+                          className={`p-2 rounded-2xl border-2 transition-all group relative overflow-hidden ${
+                            selectedJerseyId === jersey.id
+                              ? 'border-primary ring-2 ring-primary/20 bg-primary/5'
+                              : 'border-white/10 hover:border-white/20 bg-white/2'
+                          }`}
+                        >
+                          <div className="aspect-square rounded-xl overflow-hidden mb-2">
+                            <img src={jersey.imageUrl} className="w-full h-full object-cover" alt={jersey.name} referrerPolicy="no-referrer" />
+                          </div>
+                          <p className={`text-[9px] font-black uppercase tracking-tighter truncate ${selectedJerseyId === jersey.id ? 'text-primary' : 'text-gray-400'}`}>
+                            {jersey.name}
+                          </p>
+                          {selectedJerseyId === jersey.id && (
+                            <div className="absolute top-1 right-1 bg-primary p-0.5 rounded-full">
+                              <Check className="w-3 h-3 text-black" />
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 <div className="space-y-4">
                   <label className="text-[10px] uppercase font-black tracking-[0.3em] text-gray-500 pl-2">Para quem é esta camisa?</label>

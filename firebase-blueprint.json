@@ -42,12 +42,20 @@
           "type": "string",
           "description": "The person responsible for the whole order/jersey"
         },
+        "jerseyId": {
+          "type": "string",
+          "description": "ID of the selected jersey model"
+        },
+        "jerseyName": {
+          "type": "string",
+          "description": "Name of the selected jersey model"
+        },
         "createdAt": {
           "type": "string",
           "format": "date-time"
         }
       },
-      "required": ["name", "number", "size", "quantity", "userId", "createdAt", "status"]
+      "required": ["name", "number", "size", "quantity", "userId", "createdAt", "status", "jerseyId", "jerseyName"]
     },
     "siteConfig": {
       "title": "Site Configuration",
