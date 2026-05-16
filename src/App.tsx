@@ -942,7 +942,11 @@ export default function App() {
                 )}
 
                 {activeAdminTab === 'textos' && (
-                  <div className="space-y-8">
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="space-y-8"
+                  >
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-3">
                         <label className="text-[10px] uppercase font-black tracking-[0.3em] text-gray-500 pl-2">Nome do Site (Parte 1)</label>
@@ -1043,11 +1047,15 @@ export default function App() {
                         </button>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 )}
 
                 {activeAdminTab === 'vitrine' && (
-                  <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="space-y-10"
+                  >
                     <div className="bg-primary/5 border border-primary/20 p-8 rounded-[2.5rem] space-y-6">
                       <div className="flex items-center gap-4 mb-2">
                         <Star className="w-6 h-6 text-primary" />
@@ -1145,7 +1153,13 @@ export default function App() {
 
                     <div className="space-y-6">
                       <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500">Camisas Cadastradas</h4>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                      {jerseys.length === 0 ? (
+                        <div className="bg-white/5 border border-dashed border-white/10 rounded-3xl p-10 text-center">
+                          <Trophy className="w-8 h-8 text-gray-800 mx-auto mb-2 opacity-20" />
+                          <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">Nenhuma camisa na vitrine</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                         {jerseys.map(j => (
                           <div key={j.id} className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden group">
                             <div className="aspect-[4/5] relative">
@@ -1183,12 +1197,17 @@ export default function App() {
                           </div>
                         ))}
                       </div>
-                    </div>
+                    )}
                   </div>
-                )}
+                </motion.div>
+              )}
 
                 {activeAdminTab === 'stats' && (
-                  <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="space-y-8"
+                  >
                     <div className="grid grid-cols-2 gap-4">
                       <div className="bg-[#1a3b32]/30 p-8 rounded-3xl border border-primary/10">
                         <p className="text-[10px] font-black uppercase text-gray-500 mb-2">Pagos / Totais</p>
@@ -1229,7 +1248,7 @@ export default function App() {
                       <Download className="w-6 h-6 text-primary" />
                       EXPORTAR RELATÓRIO COMPLETO (CSV)
                     </button>
-                  </div>
+                  </motion.div>
                 )}
 
                 {activeAdminTab === 'reservas' && (
