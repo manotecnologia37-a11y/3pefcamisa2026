@@ -67,6 +67,19 @@
         "siteNameHighlight": { "type": "string" },
         "footerSlogan": { "type": "string" }
       }
+    },
+    "jerseyDesign": {
+      "title": "Jersey Design",
+      "description": "Information about a jersey design in the showcase",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "description": { "type": "string" },
+        "order": { "type": "number" },
+        "price": { "type": "string" }
+      },
+      "required": ["name", "imageUrl"]
     }
   },
   "firestore": {
@@ -77,6 +90,10 @@
     "/configs/{configId}": {
       "schema": "siteConfig",
       "description": "Site-wide configuration settings"
+    },
+    "/jerseys/{jerseyId}": {
+      "schema": "jerseyDesign",
+      "description": "Collection of jersey designs for the showcase"
     }
   }
 }

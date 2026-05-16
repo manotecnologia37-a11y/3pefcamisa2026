@@ -1,6 +1,6 @@
 import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trophy, Users, Star, Plus, X, Phone, Check, AlertCircle, LogIn, LogOut, Settings, Download, Camera } from 'lucide-react';
+import { Trophy, Users, Star, Plus, X, Phone, Check, AlertCircle, LogIn, LogOut, Settings, Download, Camera, Trash2, Edit2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { 
   collection, 
   onSnapshot, 
@@ -83,6 +83,15 @@ interface SiteConfig {
   footerSlogan: string;
 }
 
+interface JerseyDesign {
+  id: string;
+  name: string;
+  imageUrl: string;
+  description?: string;
+  order?: number;
+  price?: string;
+}
+
 const DEFAULT_CONFIG: SiteConfig = {
   logoUrl: '',
   bannerUrl: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=2693&auto=format&fit=crop',
@@ -102,6 +111,7 @@ const JERSEY_SIZES = ['P', 'M', 'G', 'GG', 'XG'];
 
 export default function App() {
   const [registrations, setRegistrations] = useState<JerseyRegistration[]>([]);
+  const [jerseys, setJerseys] = useState<JerseyDesign[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -110,7 +120,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [siteConfig, setSiteConfig] = useState<SiteConfig>(DEFAULT_CONFIG);
-  const [activeAdminTab, setActiveAdminTab] = useState<'design' | 'textos' | 'stats' | 'reservas'>('design');
+  const [activeAdminTab, setActiveAdminTab] = useState<'design' | 'textos' | 'vitrine' | 'stats' | 'reservas'>('design');
 
   // Admin Config Form State
   const [configForm, setConfigForm] = useState<SiteConfig>(DEFAULT_CONFIG);
@@ -123,6 +133,16 @@ export default function App() {
   const [recipientType, setRecipientType] = useState<'Atleta' | 'Familia' | 'Amigo'>('Atleta');
   const [recipientName, setRecipientName] = useState('');
   const [responsibleName, setResponsibleName] = useState('');
+
+  // Jersey Showcase Admin State
+  const [editingJersey, setEditingJersey] = useState<JerseyDesign | null>(null);
+  const [jerseyForm, setJerseyForm] = useState<Omit<JerseyDesign, 'id'>>({
+    name: '',
+    imageUrl: '',
+    description: '',
+    order: 0,
+    price: ''
+  });
 
   // Auth Listener
   useEffect(() => {
@@ -164,6 +184,22 @@ export default function App() {
         }
       }
     });
+    return () => unsubscribe();
+  }, []);
+
+  // Jerseys Listener
+  useEffect(() => {
+    const q = query(collection(db, 'jerseys'), orderBy('order', 'asc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as JerseyDesign[];
+      setJerseys(data);
+    }, (err) => {
+      handleFirestoreError(err, OperationType.LIST, 'jerseys');
+    });
+
     return () => unsubscribe();
   }, []);
 
@@ -340,6 +376,66 @@ export default function App() {
     }
   };
 
+  const handleSaveJersey = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!isAdmin) return;
+    setAdminError(null);
+
+    if (!jerseyForm.name || !jerseyForm.imageUrl) {
+      setAdminError("Nome e Imagem são obrigatórios para a vitrine.");
+      return;
+    }
+
+    try {
+      if (editingJersey) {
+        await updateDoc(doc(db, 'jerseys', editingJersey.id), {
+          ...jerseyForm,
+          updatedAt: serverTimestamp()
+        });
+      } else {
+        const newDocRef = doc(collection(db, 'jerseys'));
+        await setDoc(newDocRef, {
+          ...jerseyForm,
+          createdAt: serverTimestamp()
+        });
+      }
+      setEditingJersey(null);
+      setJerseyForm({ name: '', imageUrl: '', description: '', order: jerseys.length + 1, price: '' });
+    } catch (err: any) {
+      handleFirestoreError(err, OperationType.WRITE, 'jerseys');
+    }
+  };
+
+  const removeJersey = async (id: string) => {
+    if (!isAdmin) return;
+    if (!confirm("Tem certeza que deseja remover esta camisa da vitrine?")) return;
+    try {
+      await deleteDoc(doc(db, 'jerseys', id));
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, `jerseys/${id}`);
+    }
+  };
+
+  const handleJerseyImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setAdminError(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 512000) {
+      setAdminError(`A imagem é muito pesada (${(file.size/1024).toFixed(0)}KB). Use imagens menores que 500KB.`);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadstart = () => setIsLoading(true);
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      setJerseyForm(prev => ({ ...prev, imageUrl: base64String }));
+      setIsLoading(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const exportToCSV = () => {
     const headers = ['Nome da camisa', 'Numero', 'Responsável', 'Para', 'Tamanho', 'Quantidade', 'Status', 'Usuario'];
     const rows = registrations.map(r => [
@@ -499,8 +595,68 @@ export default function App() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 -mt-10 relative z-30">
-        <div className="flex flex-col gap-8">
+        <div className="flex flex-col gap-12">
           
+          {/* Showcase (Vitrine) */}
+          {jerseys.length > 0 && (
+            <section className="space-y-8">
+              <div className="text-center">
+                <h2 className="text-3xl sm:text-5xl font-black uppercase tracking-tighter italic flex items-center justify-center gap-3">
+                  VITRINE DE <span className="text-primary">GLÓRIA</span>
+                </h2>
+                <div className="w-24 h-1 bg-primary mx-auto mt-4 rounded-full" />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+                {jerseys.map((jersey, idx) => (
+                  <motion.div
+                    key={jersey.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.1 }}
+                    className="group relative bg-[#111] border border-[#1a3b32] rounded-[2.5rem] overflow-hidden shadow-2xl hover:border-primary/40 transition-all hover:-translate-y-2"
+                  >
+                    <div className="aspect-[4/5] overflow-hidden relative">
+                      <img 
+                        src={jersey.imageUrl} 
+                        alt={jersey.name}
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60" />
+                      
+                      {jersey.price && (
+                        <div className="absolute top-6 right-6 bg-primary text-black font-black px-4 py-2 rounded-xl text-sm shadow-xl italic">
+                          {jersey.price}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="p-8">
+                      <h3 className="text-2xl font-black uppercase italic tracking-tight mb-2 group-hover:text-primary transition-colors">
+                        {jersey.name}
+                      </h3>
+                      {jersey.description && (
+                        <p className="text-gray-500 text-sm font-medium leading-relaxed italic line-clamp-2">
+                          {jersey.description}
+                        </p>
+                      )}
+                      
+                      <div className="mt-6 flex items-center justify-between">
+                        <div className="flex gap-1">
+                          {[1, 2, 3, 4, 5].map(star => (
+                            <Star key={star} className="w-3 h-3 text-primary fill-primary" />
+                          ))}
+                        </div>
+                        <span className="text-[10px] font-black uppercase text-primary/50 tracking-widest">Modelo Oficial</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* Registrations List */}
           <div className="space-y-8 mt-4">
              <div className="flex flex-col sm:flex-row sm:items-end justify-between border-b border-[#1a3b32] pb-4 gap-4">
@@ -700,6 +856,12 @@ export default function App() {
                         Conteúdo
                       </button>
                       <button 
+                        onClick={() => setActiveAdminTab('vitrine')}
+                        className={`flex-1 sm:flex-none px-4 sm:px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeAdminTab === 'vitrine' ? 'bg-primary text-black' : 'hover:bg-white/5 text-gray-500'}`}
+                      >
+                        Vitrine
+                      </button>
+                      <button 
                         onClick={() => setActiveAdminTab('stats')}
                         className={`flex-1 sm:flex-none px-4 sm:px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeAdminTab === 'stats' ? 'bg-primary text-black' : 'hover:bg-white/5 text-gray-500'}`}
                       >
@@ -879,6 +1041,144 @@ export default function App() {
                         >
                           <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all duration-300 ${configForm.isOpen ? 'left-9' : 'left-1'}`} />
                         </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeAdminTab === 'vitrine' && (
+                  <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="bg-primary/5 border border-primary/20 p-8 rounded-[2.5rem] space-y-6">
+                      <div className="flex items-center gap-4 mb-2">
+                        <Star className="w-6 h-6 text-primary" />
+                        <h4 className="text-xl font-black uppercase italic tracking-tight">{editingJersey ? 'Editar Camisa' : 'Adicionar Nova Camisa'}</h4>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-3">
+                          <label className="text-[10px] uppercase font-black tracking-[0.3em] text-gray-500 pl-2">Nome do Modelo</label>
+                          <input
+                            type="text"
+                            value={jerseyForm.name}
+                            onChange={(e) => setJerseyForm({...jerseyForm, name: e.target.value.toUpperCase()})}
+                            className="w-full bg-black/40 border-2 border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:border-primary transition-all font-black text-sm"
+                            placeholder="EX: MANTO TITULAR 2026"
+                          />
+                        </div>
+                        <div className="space-y-3">
+                          <label className="text-[10px] uppercase font-black tracking-[0.3em] text-gray-500 pl-2">Preço (Opcional)</label>
+                          <input
+                            type="text"
+                            value={jerseyForm.price || ''}
+                            onChange={(e) => setJerseyForm({...jerseyForm, price: e.target.value})}
+                            className="w-full bg-black/40 border-2 border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:border-primary transition-all font-bold text-sm"
+                            placeholder="EX: R$ 149,90"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <label className="text-[10px] uppercase font-black tracking-[0.3em] text-gray-500 pl-2">Descrição Curta</label>
+                        <input
+                          type="text"
+                          value={jerseyForm.description || ''}
+                          onChange={(e) => setJerseyForm({...jerseyForm, description: e.target.value})}
+                          className="w-full bg-black/40 border-2 border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:border-primary transition-all font-medium text-sm"
+                          placeholder="EX: Tecido tecnológico com detalhes bordados em alta definição."
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+                        <div className="space-y-4">
+                          <label className="text-[10px] uppercase font-black tracking-[0.3em] text-gray-500 pl-2">Foto da Camisa</label>
+                          <div className="flex flex-col gap-4">
+                            <div className="aspect-[4/5] bg-black/40 border-2 border-dashed border-white/20 rounded-3xl flex items-center justify-center overflow-hidden">
+                              {jerseyForm.imageUrl ? (
+                                <img src={jerseyForm.imageUrl} className="w-full h-full object-cover" alt="Preview" referrerPolicy="no-referrer" />
+                              ) : (
+                                <Camera className="w-10 h-10 text-gray-800" />
+                              )}
+                            </div>
+                            <input type="file" accept="image/*" onChange={handleJerseyImageChange} className="hidden" id="jersey-upload" />
+                            <label htmlFor="jersey-upload" className="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 py-4 rounded-xl text-center text-[10px] font-black uppercase tracking-widest cursor-pointer transition-all">
+                              Upload de Foto
+                            </label>
+                          </div>
+                        </div>
+                        <div className="space-y-4">
+                           <div className="space-y-3 mb-6">
+                            <label className="text-[10px] uppercase font-black tracking-[0.3em] text-gray-500 pl-2">Ordem de Exibição</label>
+                            <input
+                              type="number"
+                              value={jerseyForm.order}
+                              onChange={(e) => setJerseyForm({...jerseyForm, order: parseInt(e.target.value)})}
+                              className="w-full bg-black/40 border-2 border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:border-primary transition-all font-black"
+                            />
+                          </div>
+                          <div className="flex gap-4">
+                            <button
+                              type="button"
+                              onClick={handleSaveJersey}
+                              className="flex-1 bg-primary text-black font-black py-4 rounded-2xl shadow-xl hover:opacity-90 active:scale-95 transition-all uppercase tracking-tighter"
+                            >
+                              {editingJersey ? 'Atualizar' : 'Adicionar'}
+                            </button>
+                            {editingJersey && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingJersey(null);
+                                  setJerseyForm({ name: '', imageUrl: '', description: '', order: jerseys.length + 1, price: '' });
+                                }}
+                                className="flex-1 bg-white/5 text-gray-400 font-black py-4 rounded-2xl border border-white/10 hover:bg-white/10 transition-all uppercase tracking-tighter"
+                              >
+                                Cancelar
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-6">
+                      <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500">Camisas Cadastradas</h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                        {jerseys.map(j => (
+                          <div key={j.id} className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden group">
+                            <div className="aspect-[4/5] relative">
+                              <img src={j.imageUrl} className="w-full h-full object-cover" alt={j.name} referrerPolicy="no-referrer" />
+                              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingJersey(j);
+                                    setJerseyForm({
+                                      name: j.name,
+                                      imageUrl: j.imageUrl,
+                                      description: j.description || '',
+                                      order: j.order || 0,
+                                      price: j.price || ''
+                                    });
+                                  }}
+                                  className="p-3 bg-primary text-black rounded-full hover:scale-110 active:scale-90 transition-all shadow-lg"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => removeJersey(j.id)}
+                                  className="p-3 bg-red-500 text-white rounded-full hover:scale-110 active:scale-90 transition-all shadow-lg"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                            <div className="p-4">
+                              <p className="text-[10px] font-black uppercase truncate">{j.name}</p>
+                              <p className="text-[8px] text-primary font-bold mt-1">Ordem: {j.order}</p>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </div>
