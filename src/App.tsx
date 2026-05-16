@@ -443,8 +443,8 @@ export default function App() {
         </div>
       </header>
 
-      {/* Hero / Banner / Banner */}
-      <section className="relative h-[55vh] sm:h-[60vh] min-h-[400px] sm:min-h-[450px] flex items-center justify-center overflow-hidden pt-16">
+      {/* Hero / Banner */}
+      <section className="relative h-[65vh] sm:h-[75vh] min-h-[500px] sm:min-h-[600px] flex items-center justify-center overflow-hidden pt-16 md:pt-20">
         <div className="absolute inset-0 bg-gradient-to-b from-[#1a3b32]/60 to-[#0a0a0a] z-10" />
         <div 
           className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 opacity-30 sm:opacity-40 grayscale"
@@ -459,16 +459,17 @@ export default function App() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
+            className="flex flex-col items-center"
           >
             <span className="inline-block px-3 sm:px-4 py-1 sm:py-1.5 bg-[#1a3b32] text-primary text-[8px] sm:text-[10px] font-black tracking-[0.4em] uppercase rounded-full mb-4 sm:mb-6 border border-primary/30 shadow-xl shadow-black/50">
               {siteConfig.seasonText}
             </span>
-            <h1 className="text-3xl sm:text-6xl md:text-7xl lg:text-[8rem] font-black mb-6 sm:mb-8 tracking-tighter uppercase italic leading-[0.9] drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+            <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-[8rem] font-black mb-4 sm:mb-8 tracking-tight sm:tracking-tighter uppercase italic leading-[0.85] sm:leading-[0.8] drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
               {(siteConfig.heroTitle || '').split(' ').map((word, i) => (
                 <span key={i} className={word === 'MANTO' || word === 'CAMISA' ? 'text-primary block sm:inline' : ''}>{word} </span>
               ))}
             </h1>
-            <p className="text-gray-400 text-sm sm:text-lg md:text-2xl font-medium max-w-[280px] xs:max-w-md sm:max-w-2xl md:max-w-3xl mx-auto mb-8 sm:mb-12 leading-relaxed opacity-80 italic">
+            <p className="text-gray-400 text-sm sm:text-lg md:text-xl font-medium max-w-[280px] xs:max-w-md sm:max-w-2xl md:max-w-3xl mx-auto mb-10 sm:mb-14 leading-relaxed opacity-80 italic">
               {siteConfig.heroSubtitle}
             </p>
             
@@ -478,16 +479,16 @@ export default function App() {
                  currentUser ? setIsModalOpen(true) : handleLogin();
                }}
                disabled={!siteConfig.isOpen && !isAdmin}
-               className={`${(siteConfig.isOpen || isAdmin) ? 'bg-primary hover:bg-primary/90 shadow-xl hover:scale-105' : 'bg-gray-800 text-gray-500 cursor-not-allowed'} text-black font-black py-3 sm:py-4 px-6 sm:px-10 rounded-2xl flex items-center gap-2 sm:gap-3 mx-auto transition-all active:scale-95 group uppercase tracking-tight text-xs sm:text-base`}
+               className={`${(siteConfig.isOpen || isAdmin) ? 'bg-primary hover:bg-primary/90 shadow-xl hover:scale-105' : 'bg-gray-800 text-gray-500 cursor-not-allowed'} text-black font-black py-4 sm:py-5 px-8 sm:px-14 rounded-2xl flex items-center gap-2 sm:gap-3 transition-all active:scale-95 group uppercase tracking-tight text-xs sm:text-lg`}
             >
                {(siteConfig.isOpen || isAdmin) ? (
                  <>
-                   <Plus className="w-4 h-4 sm:w-5 sm:h-5 group-hover:rotate-90 transition-transform" />
+                   <Plus className="w-5 h-5 sm:w-6 sm:h-6 group-hover:rotate-90 transition-transform" />
                    {currentUser ? 'FAZER MINHA RESERVA' : 'ENTRE PARA RESERVAR'}
                  </>
                ) : (
                  <>
-                   <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                   <X className="w-5 h-5 sm:w-6 sm:h-6" />
                    SISTEMA FECHADO
                  </>
                )}
