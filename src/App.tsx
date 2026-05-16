@@ -129,6 +129,7 @@ export default function App() {
   const [editingRegistration, setEditingRegistration] = useState<JerseyRegistration | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isQuotaExceeded, setIsQuotaExceeded] = useState(false);
   const [siteConfig, setSiteConfig] = useState<SiteConfig>(DEFAULT_CONFIG);
   const [activeAdminTab, setActiveAdminTab] = useState<'design' | 'textos' | 'vitrine' | 'patrocinadores' | 'stats' | 'reservas'>('design');
 
@@ -183,8 +184,15 @@ export default function App() {
         ...doc.data()
       })) as JerseyRegistration[];
       setRegistrations(data);
+      setIsQuotaExceeded(false);
+      setIsLoading(false);
     }, (err) => {
-      handleFirestoreError(err, OperationType.LIST, 'registrations');
+      if (err.message?.includes('Quota limit exceeded') || err.message?.includes('resource-exhausted')) {
+        setIsQuotaExceeded(true);
+      } else {
+        handleFirestoreError(err, OperationType.LIST, 'registrations');
+      }
+      setIsLoading(false);
     });
 
     return () => unsubscribe();
@@ -197,12 +205,20 @@ export default function App() {
         const data = { ...DEFAULT_CONFIG, ...snapshot.data() } as SiteConfig;
         setSiteConfig(data);
         setConfigForm(data);
+        setIsQuotaExceeded(false);
 
         // Update Theme Color
         if (data.primaryColor) {
            document.documentElement.style.setProperty('--primary', data.primaryColor);
         }
       }
+      setIsLoading(false);
+    }, (err) => {
+      console.error("Erro ao carregar configurações:", err);
+      if (err.message?.includes('Quota limit exceeded') || err.message?.includes('resource-exhausted')) {
+        setIsQuotaExceeded(true);
+      }
+      setIsLoading(false);
     });
     return () => unsubscribe();
   }, []);
@@ -219,8 +235,14 @@ export default function App() {
       // Ordenação manual no cliente para evitar necessidade de índices compostos imediatos
       const sortedData = data.sort((a, b) => (a.order || 0) - (b.order || 0));
       setJerseys(sortedData);
+      setIsQuotaExceeded(false);
+      setIsLoading(false);
     }, (err) => {
       console.error("Erro ao carregar vitrine:", err);
+      if (err.message?.includes('Quota limit exceeded') || err.message?.includes('resource-exhausted')) {
+        setIsQuotaExceeded(true);
+      }
+      setIsLoading(false);
       // Não lançamos erro aqui para não travar o app se a coleção estiver vazia ou com problema de permissão temporário
     });
 
@@ -237,8 +259,14 @@ export default function App() {
       })) as Sponsor[];
       const sortedData = data.sort((a, b) => (a.order || 0) - (b.order || 0));
       setSponsors(sortedData);
+      setIsQuotaExceeded(false);
+      setIsLoading(false);
     }, (err) => {
       console.error("Erro ao carregar patrocinadores:", err);
+      if (err.message?.includes('Quota limit exceeded') || err.message?.includes('resource-exhausted')) {
+        setIsQuotaExceeded(true);
+      }
+      setIsLoading(false);
     });
 
     return () => unsubscribe();
@@ -599,6 +627,21 @@ export default function App() {
         .scrollbar-none::-webkit-scrollbar { display: none; }
         .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
+      {/* Quota Warning */}
+      <AnimatePresence>
+        {isQuotaExceeded && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="bg-red-600 text-white py-3 px-4 text-center text-xs font-black uppercase tracking-widest sticky top-0 z-[60] shadow-2xl border-b border-red-500 flex items-center justify-center gap-3"
+          >
+            <AlertCircle className="w-5 h-5" />
+            <span>Atenção: Limite diário de acessos do Firebase atingido (Quota). O sistema voltará ao normal em breve.</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <header className="border-b border-[#1a3b32] bg-black/80 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
