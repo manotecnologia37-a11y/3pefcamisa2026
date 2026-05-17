@@ -1,6 +1,6 @@
 import { useState, useEffect, FormEvent, ChangeEvent, MouseEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trophy, Users, Star, Plus, X, Phone, Check, AlertCircle, LogIn, LogOut, Settings, Download, Camera, Trash2, Edit2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Trophy, Users, Star, Plus, X, Phone, Check, AlertCircle, LogIn, LogOut, Settings, Download, Camera, Trash2, Edit2, ChevronLeft, ChevronRight, Search, LayoutGrid, List } from 'lucide-react';
 import { 
   collection, 
   onSnapshot, 
@@ -164,6 +164,10 @@ export default function App() {
     order: 0
   });
 
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+
   // Auth Listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -176,11 +180,6 @@ export default function App() {
 
   // Data Listener (Registrations)
   useEffect(() => {
-    if (!isAdmin) {
-      setRegistrations([]);
-      return;
-    }
-
     const q = query(collection(db, 'registrations'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({
@@ -193,7 +192,7 @@ export default function App() {
     });
 
     return () => unsubscribe();
-  }, [isAdmin]);
+  }, []);
 
   // Config Listener
   useEffect(() => {
@@ -250,19 +249,25 @@ export default function App() {
   }, []);
 
   const handleLogin = async () => {
+    if (isLoggingIn) return;
+    setIsLoggingIn(true);
     try {
       await signInWithGoogle();
     } catch (err: any) {
       console.error("Login attempt failed:", err);
       if (err.code === 'auth/popup-closed-by-user') {
         setError("O login foi cancelado ou fechou inesperadamente. Verifique se o seu navegador não bloqueou o pop-up.");
+      } else if (err.code === 'auth/cancelled-popup-request') {
+        setError("Uma tentativa de login já estava em andamento. Por favor, aguarde o pop-up ou tente novamente.");
       } else if (err.code === 'auth/unauthorized-domain') {
-        setError("Este domínio não está autorizado no Firebase Console. Adicione '3pefcamisa2026.vercel.app' em Authentication > Settings > Authorized Domains.");
+        setError("Este domínio não está autorizado no Firebase Console. Adicione o domínio atual em Authentication > Settings > Authorized Domains.");
       } else if (err.code === 'auth/network-request-failed') {
         setError("Erro de rede ao tentar logar. Verifique sua conexão.");
       } else {
         setError(`Erro ao fazer login: ${err.message || "Tente novamente."}`);
       }
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
@@ -362,6 +367,7 @@ export default function App() {
   };
 
   const startEditing = (reg: JerseyRegistration) => {
+    if (!reg) return;
     setEditingRegistration(reg);
     setName(reg.name);
     setNumber(reg.number);
@@ -662,10 +668,15 @@ export default function App() {
             ) : (
               <button 
                 onClick={handleLogin}
-                className="flex items-center gap-1.5 sm:gap-2 bg-primary/10 hover:bg-primary/20 text-primary px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-primary/20 transition-all text-xs sm:text-sm font-bold shadow-sm"
+                disabled={isLoggingIn}
+                className={`flex items-center gap-1.5 sm:gap-2 bg-primary/10 hover:bg-primary/20 text-primary px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-primary/20 transition-all text-xs sm:text-sm font-bold shadow-sm ${isLoggingIn ? 'opacity-50 cursor-wait' : ''}`}
               >
-                <LogIn className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span className="hidden xs:inline">ENTRAR</span>
+                {isLoggingIn ? (
+                  <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <LogIn className="w-3.5 h-3.5 sm:w-4 h-4" />
+                )}
+                <span className="hidden xs:inline">{isLoggingIn ? 'ENTRANDO...' : 'ENTRAR'}</span>
               </button>
             )}
           </div>
@@ -710,16 +721,20 @@ export default function App() {
                  setResponsibleName('');
                  currentUser ? setIsModalOpen(true) : handleLogin();
                }}
-               disabled={!siteConfig.isOpen && !isAdmin}
-               className={`${(siteConfig.isOpen || isAdmin) ? 'bg-primary hover:bg-primary/90 shadow-2xl hover:shadow-primary/20 hover:scale-105 active:scale-95' : 'bg-gray-800 text-gray-500 cursor-not-allowed'} px-6 py-4 sm:px-10 sm:py-6 rounded-2xl sm:rounded-3xl flex items-center gap-3 sm:gap-4 transition-all group z-30`}
+               disabled={(isLoggingIn) || (!siteConfig.isOpen && !isAdmin)}
+               className={`${(siteConfig.isOpen || isAdmin) ? 'bg-primary hover:bg-primary/90 shadow-2xl hover:shadow-primary/20 hover:scale-105 active:scale-95' : 'bg-gray-800 text-gray-500 cursor-not-allowed'} px-6 py-4 sm:px-10 sm:py-6 rounded-2xl sm:rounded-3xl flex items-center gap-3 sm:gap-4 transition-all group z-30 ${isLoggingIn ? 'opacity-70 cursor-wait' : ''}`}
             >
                {(siteConfig.isOpen || isAdmin) ? (
                  <>
                    <div className="bg-black/10 p-1.5 sm:p-2 rounded-lg sm:rounded-xl group-hover:bg-black/20 transition-colors">
-                    <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-black group-hover:rotate-90 transition-transform" />
+                    {isLoggingIn ? (
+                      <div className="w-5 h-5 sm:w-6 sm:h-6 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-black group-hover:rotate-90 transition-transform" />
+                    )}
                    </div>
                    <span className="text-black font-black text-sm sm:text-lg uppercase tracking-widest italic">
-                     {currentUser ? 'FAZER MINHA RESERVA' : 'ENTRE PARA RESERVAR'}
+                     {isLoggingIn ? 'PROCESSANDO...' : currentUser ? 'FAZER MINHA RESERVA' : 'ENTRE PARA RESERVAR'}
                    </span>
                  </>
                ) : (
@@ -741,25 +756,32 @@ export default function App() {
               Nossos Patrocinadores
             </h3>
           </div>
-          <motion.div 
-            className="flex items-center gap-16 sm:gap-24 whitespace-nowrap"
-            animate={{ x: ["0%", "-50%"] }}
-            transition={{ 
-              repeat: Infinity, 
-              duration: sponsors.length * 4 + 20, 
-              ease: "linear" 
-            }}
-          >
-            {[...sponsors, ...sponsors, ...sponsors].map((sponsor, i) => (
-              <div key={`${sponsor.id}-${i}`} className="flex-shrink-0 flex items-center gap-4 grayscale opacity-30 hover:grayscale-0 hover:opacity-100 transition-all duration-500 cursor-default">
-                {sponsor.imageUrl ? (
-                  <img src={sponsor.imageUrl} alt={sponsor.name} className="h-10 sm:h-16 w-auto max-w-[150px] sm:max-w-[200px] object-contain" referrerPolicy="no-referrer" />
-                ) : (
-                  <span className="font-black italic text-xl sm:text-3xl text-white/20 tracking-tighter uppercase">{sponsor.name}</span>
-                )}
-              </div>
-            ))}
-          </motion.div>
+          
+          <div className="relative group">
+            {/* Edge Fading Masks */}
+            <div className="absolute left-0 top-0 w-24 sm:w-48 h-full bg-gradient-to-r from-[#0a0a0a] to-transparent z-10 pointer-events-none" />
+            <div className="absolute right-0 top-0 w-24 sm:w-48 h-full bg-gradient-to-l from-[#0a0a0a] to-transparent z-10 pointer-events-none" />
+            
+            <motion.div 
+              className="flex items-center gap-16 sm:gap-24 whitespace-nowrap"
+              animate={{ x: ["0%", "-50%"] }}
+              transition={{ 
+                repeat: Infinity, 
+                duration: Math.max(sponsors.length * 4, 30), 
+                ease: "linear" 
+              }}
+            >
+              {[...sponsors, ...sponsors].map((sponsor, i) => (
+                <div key={`${sponsor.id}-${i}`} className="flex-shrink-0 flex items-center gap-4 grayscale opacity-30 hover:grayscale-0 hover:opacity-100 transition-all duration-500 cursor-default">
+                  {sponsor.imageUrl ? (
+                    <img src={sponsor.imageUrl} alt={sponsor.name} className="h-10 sm:h-16 w-auto max-w-[150px] sm:max-w-[200px] object-contain" referrerPolicy="no-referrer" />
+                  ) : (
+                    <span className="font-black italic text-xl sm:text-3xl text-white/20 tracking-tighter uppercase">{sponsor.name}</span>
+                  )}
+                </div>
+              ))}
+            </motion.div>
+          </div>
         </div>
       )}
 
@@ -838,151 +860,269 @@ export default function App() {
 
           {/* Registrations List */}
           <div className="space-y-8 mt-4">
-             <div className="flex flex-col sm:flex-row sm:items-end justify-between border-b border-[#1a3b32] pb-4 gap-4">
-                <div>
-                   <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tighter italic flex items-center gap-3">
-                      CONVOCAÇÃO <span className="text-primary">OFICIAL</span>
-                   </h2>
-                   <p className="text-gray-500 text-xs sm:text-sm font-medium mt-1 uppercase tracking-widest leading-relaxed">Confira quem já garantiu o seu uniforme</p>
-                </div>
-                 <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      onClick={() => currentUser ? setIsModalOpen(true) : handleLogin()}
-                      className="bg-primary hover:bg-primary/90 text-black font-black text-[10px] px-4 sm:px-6 py-3 rounded-2xl transition-all shadow-xl uppercase italic tracking-widest active:scale-95 whitespace-nowrap"
-                    >
-                      FAZER RESERVA
-                    </button>
-                    {isAdmin && (
+             <div className="flex flex-col gap-8 border-b border-[#1a3b32] pb-8">
+                <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                  <div>
+                    <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tighter italic flex items-center gap-3">
+                        CONVOCAÇÃO <span className="text-primary">OFICIAL</span>
+                    </h2>
+                    <p className="text-gray-500 text-xs sm:text-sm font-medium mt-1 uppercase tracking-widest leading-relaxed">Confira quem já garantiu o seu uniforme</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
                       <button
-                        onClick={exportToCSV}
-                        className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-primary hover:text-white transition-colors bg-[#1a3b32]/30 px-4 sm:px-5 py-3 rounded-2xl border border-primary/20 whitespace-nowrap"
+                        onClick={() => currentUser ? setIsModalOpen(true) : handleLogin()}
+                        disabled={isLoggingIn}
+                        className={`bg-primary hover:bg-primary/90 text-black font-black text-[10px] px-4 sm:px-6 py-3 rounded-2xl transition-all shadow-xl uppercase italic tracking-widest active:scale-95 whitespace-nowrap ${isLoggingIn ? 'opacity-50 cursor-wait' : ''}`}
                       >
-                        <Download className="w-4 h-4" />
-                        Exportar
+                        {isLoggingIn ? 'LOGIN...' : 'FAZER RESERVA'}
                       </button>
-                    )}
-                 </div>
+                      {isAdmin && (
+                        <button
+                          onClick={exportToCSV}
+                          className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-primary hover:text-white transition-colors bg-[#1a3b32]/30 px-4 sm:px-5 py-3 rounded-2xl border border-primary/20 whitespace-nowrap"
+                        >
+                          <Download className="w-4 h-4" />
+                          Exportar
+                        </button>
+                      )}
+                  </div>
+                </div>
+
+                <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-black/40 p-4 rounded-3xl border border-white/5 shadow-inner">
+                  <div className="relative w-full md:w-96 group">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-primary transition-colors" />
+                    <input 
+                      type="text"
+                      placeholder="Buscar por nome ou número..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 py-3 text-xs font-bold uppercase tracking-widest focus:outline-none focus:border-primary focus:bg-white/10 transition-all placeholder:text-gray-700"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-1 bg-black p-1 rounded-2xl border border-white/10 self-end md:self-auto">
+                    <button 
+                      onClick={() => setViewMode('list')}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'list' ? 'bg-primary text-black shadow-lg shadow-primary/20' : 'text-gray-500 hover:text-gray-300'}`}
+                    >
+                      <List className="w-3.5 h-3.5" />
+                      Lista
+                    </button>
+                    <button 
+                      onClick={() => setViewMode('grid')}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'grid' ? 'bg-primary text-black shadow-lg shadow-primary/20' : 'text-gray-500 hover:text-gray-300'}`}
+                    >
+                      <LayoutGrid className="w-3.5 h-3.5" />
+                      Grade
+                    </button>
+                  </div>
+                </div>
              </div>
 
-             <div className="bg-[#111] border border-[#1a3b32] rounded-[2rem] overflow-hidden shadow-2xl">
-                <div className="overflow-x-auto">
-                   <table className="w-full text-left border-collapse">
-                      <thead>
-                         <tr className="bg-[#1a3b32] text-primary text-[10px] uppercase font-black tracking-[0.3em]">
-                            <th className="px-4 sm:px-8 py-3 whitespace-nowrap">NOME NO MANTO</th>
-                            <th className="px-4 sm:px-8 py-3">Nº</th>
-                            <th className="px-4 sm:px-8 py-3">TAM</th>
-                            <th className="px-4 sm:px-8 py-3 text-center">QTD</th>
-                            <th className="px-4 sm:px-8 py-3 text-center">SITUAÇÃO</th>
-                            <th className="px-4 sm:px-8 py-3 text-right">AÇÃO</th>
-                         </tr>
-                      </thead>
-                      <tbody className="divide-y divide-[#1a3b32]/30">
-                         <AnimatePresence mode='popLayout'>
-                            {registrations.length === 0 ? (
-                               <tr>
-                                  <td colSpan={6} className="px-8 py-24 text-center">
-                                     <Trophy className="w-16 h-16 text-gray-800 mx-auto mb-4 opacity-20" />
-                                     <p className="text-gray-600 font-bold uppercase tracking-widest">Nenhuma reserva confirmada</p>
-                                  </td>
-                               </tr>
-                            ) : (
-                               registrations.map((reg) => (
-                                  <motion.tr
-                                    key={reg.id}
-                                    layout
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, scale: 0.95 }}
-                                    className="hover:bg-white/[0.02] transition-colors group"
-                                  >
-                                     <td className="px-4 sm:px-8 py-3">
-                                        <h4 className="text-base sm:text-lg font-black uppercase tracking-tight italic leading-tight">{reg.name}</h4>
-                                        <div className="flex flex-wrap gap-2 mt-0.5">
-                                          <span className="text-[8px] bg-primary text-black px-1.5 py-0.5 rounded-full font-bold uppercase tracking-widest border border-primary/20 shrink-0">
-                                            {reg.jerseyName}
-                                          </span>
-                                          {currentUser?.uid === reg.userId && (
-                                             <span className="text-[8px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-bold uppercase tracking-widest border border-primary/20 shrink-0">Sua Reserva</span>
-                                          )}
-                                          <span className="text-[8px] bg-white/5 text-primary px-1.5 py-0.5 rounded-full font-bold uppercase tracking-widest border border-primary/10 shrink-0">
-                                            Responsável: {reg.responsibleName}
-                                          </span>
-                                          {reg.recipientType && reg.recipientType !== 'Atleta' && (
-                                            <span className="text-[8px] bg-white/5 text-gray-500 px-1.5 py-0.5 rounded-full font-bold uppercase tracking-widest border border-white/10 shrink-0">
-                                              Para: {reg.recipientName || (reg.recipientType === 'Familia' ? 'Família' : reg.recipientType)}
-                                            </span>
-                                          )}
-                                        </div>
-                                     </td>
-                                     <td className="px-4 sm:px-8 py-3">
-                                        <div className="bg-[#1a3b32] text-primary w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center text-base sm:text-lg font-black italic border border-primary/20 shadow-inner">
-                                           {reg.number.padStart(2, '0')}
-                                        </div>
-                                     </td>
-                                     <td className="px-4 sm:px-8 py-3">
-                                        <span className="text-base sm:text-lg font-black text-primary italic uppercase">{reg.size}</span>
-                                     </td>
-                                     <td className="px-4 sm:px-8 py-3 text-center">
-                                        <span className="text-base sm:text-lg font-black text-white italic">{reg.quantity}</span>
-                                     </td>
-                                     <td className="px-4 sm:px-8 py-3">
-                                        <div className="flex justify-center">
-                                           {isAdmin ? (
-                                             <select
-                                               value={reg.status || 'Pendente'}
-                                               onChange={(e) => updateJerseyStatus(reg.id, e.target.value as any)}
-                                               className={`text-[8px] sm:text-[9px] font-black uppercase tracking-widest px-2 sm:px-3 py-1 rounded-lg border focus:outline-none cursor-pointer transition-all ${
+             {viewMode === 'list' ? (
+               <div className="bg-[#111] border border-[#1a3b32] rounded-[2rem] overflow-hidden shadow-2xl">
+                  <div className="overflow-x-auto">
+                     <table className="w-full text-left border-collapse">
+                        <thead>
+                           <tr className="bg-[#1a3b32] text-primary text-[10px] uppercase font-black tracking-[0.3em]">
+                              <th className="px-4 sm:px-8 py-4 whitespace-nowrap">NOME NO MANTO</th>
+                              <th className="px-4 sm:px-8 py-4">Nº</th>
+                              <th className="px-4 sm:px-8 py-4">TAM</th>
+                              <th className="px-4 sm:px-8 py-4 text-center">QTD</th>
+                              <th className="px-4 sm:px-8 py-4 text-center">SITUAÇÃO</th>
+                              <th className="px-4 sm:px-8 py-4 text-right">AÇÃO</th>
+                           </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#1a3b32]/30">
+                           <AnimatePresence mode='popLayout'>
+                              {registrations.filter(r => 
+                                r.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                                r.number.includes(searchTerm) ||
+                                r.responsibleName.toLowerCase().includes(searchTerm.toLowerCase())
+                              ).length === 0 ? (
+                                 <tr>
+                                    <td colSpan={6} className="px-8 py-32 text-center">
+                                       <div className="bg-white/5 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                                          <Search className="w-8 h-8 text-gray-800 opacity-40" />
+                                       </div>
+                                       <p className="text-gray-600 font-bold uppercase tracking-widest italic">Nenhuma reserva encontrada para "{searchTerm}"</p>
+                                    </td>
+                                 </tr>
+                              ) : (
+                                 registrations
+                                  .filter(r => 
+                                    r.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                                    r.number.includes(searchTerm) ||
+                                    r.responsibleName.toLowerCase().includes(searchTerm.toLowerCase())
+                                  )
+                                  .map((reg) => (
+                                    <motion.tr
+                                      key={reg.id}
+                                      layout
+                                      initial={{ opacity: 0, scale: 0.98 }}
+                                      animate={{ opacity: 1, scale: 1 }}
+                                      exit={{ opacity: 0, scale: 0.95 }}
+                                      className="hover:bg-white/[0.03] transition-colors group"
+                                    >
+                                       <td className="px-4 sm:px-8 py-6">
+                                          <div className="flex flex-col gap-1.5">
+                                            <h4 className="text-base sm:text-lg font-black uppercase tracking-tight italic leading-tight group-hover:text-primary transition-colors">{reg.name}</h4>
+                                            <div className="flex flex-wrap gap-2">
+                                              <span className="text-[8px] bg-primary/10 text-primary px-2 py-0.5 rounded-md font-black uppercase tracking-widest border border-primary/20 shrink-0">
+                                                {reg.jerseyName}
+                                              </span>
+                                              {currentUser?.uid === reg.userId && (
+                                                <span className="text-[8px] bg-primary text-black px-2 py-0.5 rounded-md font-black uppercase tracking-widest border border-primary/20 shrink-0 shadow-lg shadow-primary/20 animate-pulse">Sua Reserva</span>
+                                              )}
+                                              <span className="text-[8px] bg-white/5 text-gray-400 px-2 py-0.5 rounded-md font-bold uppercase tracking-widest border border-white/10 shrink-0">
+                                                {reg.responsibleName}
+                                              </span>
+                                              {reg.recipientType && reg.recipientType !== 'Atleta' && (
+                                                <span className="text-[8px] bg-white/5 text-gray-600 px-2 py-0.5 rounded-md font-bold uppercase tracking-widest border border-white/5 shrink-0">
+                                                  Para: {reg.recipientName || (reg.recipientType === 'Familia' ? 'Família' : reg.recipientType)}
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
+                                       </td>
+                                       <td className="px-4 sm:px-8 py-6">
+                                          <div className="bg-[#1a3b32] text-primary w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center text-lg sm:text-xl font-black italic border-2 border-primary/20 shadow-[0_0_20px_rgba(212,175,55,0.1)] group-hover:scale-110 transition-transform">
+                                             {reg.number.padStart(2, '0')}
+                                          </div>
+                                       </td>
+                                       <td className="px-4 sm:px-8 py-6">
+                                          <span className="text-base sm:text-lg font-black text-primary italic uppercase">{reg.size}</span>
+                                       </td>
+                                       <td className="px-4 sm:px-8 py-6 text-center">
+                                          <span className="text-base sm:text-lg font-black text-white italic">{reg.quantity}</span>
+                                       </td>
+                                       <td className="px-4 sm:px-8 py-6">
+                                          <div className="flex justify-center">
+                                             {isAdmin ? (
+                                               <select
+                                                 value={reg.status || 'Pendente'}
+                                                 onChange={(e) => updateJerseyStatus(reg.id, e.target.value as any)}
+                                                 className={`text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border-2 focus:outline-none cursor-pointer transition-all ${
+                                                   reg.status === 'Pago' ? 'bg-green-500/10 border-green-500/30 text-green-500' :
+                                                   reg.status === 'Entregue' ? 'bg-blue-500/10 border-blue-500/30 text-blue-500' :
+                                                   'bg-yellow-500/10 border-yellow-500/30 text-yellow-500'
+                                                 }`}
+                                               >
+                                                 <option value="Pendente" className="bg-[#111]">Pendente</option>
+                                                 <option value="Pago" className="bg-[#111]">Pago</option>
+                                                 <option value="Entregue" className="bg-[#111]">Entregue</option>
+                                               </select>
+                                             ) : (
+                                               <span className={`text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border-2 ${
                                                  reg.status === 'Pago' ? 'bg-green-500/10 border-green-500/30 text-green-500' :
                                                  reg.status === 'Entregue' ? 'bg-blue-500/10 border-blue-500/30 text-blue-500' :
                                                  'bg-yellow-500/10 border-yellow-500/30 text-yellow-500'
-                                               }`}
-                                             >
-                                               <option value="Pendente" className="bg-[#111]">Pendente</option>
-                                               <option value="Pago" className="bg-[#111]">Pago</option>
-                                               <option value="Entregue" className="bg-[#111]">Entregue</option>
-                                             </select>
-                                           ) : (
-                                             <span className={`text-[8px] sm:text-[9px] font-black uppercase tracking-widest px-2 sm:px-3 py-1 rounded-lg border ${
-                                               reg.status === 'Pago' ? 'bg-green-500/10 border-green-500/30 text-green-500' :
-                                               reg.status === 'Entregue' ? 'bg-blue-500/10 border-blue-500/30 text-blue-500' :
-                                               'bg-yellow-500/10 border-yellow-500/30 text-yellow-500'
-                                             }`}>
-                                               {reg.status || 'Pendente'}
-                                             </span>
-                                           )}
-                                        </div>
-                                     </td>
-                                     <td className="px-4 sm:px-8 py-3 text-right">
-                                        <div className="flex items-center justify-end gap-2">
-                                          {(currentUser?.uid === reg.userId || isAdmin) && (
-                                            <button
-                                              onClick={() => startEditing(reg)}
-                                              className="text-[10px] font-black text-primary hover:bg-primary/10 px-4 py-2 rounded-xl transition-all uppercase tracking-tighter"
-                                            >
-                                              EDITAR
-                                            </button>
-                                          )}
-                                          {currentUser?.uid === reg.userId || isAdmin ? (
-                                            <button
-                                              onClick={() => removeRegistration(reg.id)}
-                                              className="text-[10px] font-black text-red-500/40 hover:text-red-500 hover:bg-red-500/10 px-4 py-2 rounded-xl transition-all uppercase tracking-tighter flex items-center gap-2"
-                                            >
-                                               <X className="w-4 h-4" /> REMOVER
-                                            </button>
-                                          ) : (
-                                            <div className="w-4 h-4 rounded-full bg-green-500/20 border border-green-500/40" title="Número Ocupado" />
-                                          )}
-                                        </div>
-                                     </td>
-                                  </motion.tr>
-                               ))
-                            )}
-                         </AnimatePresence>
-                      </tbody>
-                   </table>
-                </div>
-             </div>
+                                               }`}>
+                                                 {reg.status || 'Pendente'}
+                                               </span>
+                                             )}
+                                          </div>
+                                       </td>
+                                       <td className="px-4 sm:px-8 py-6 text-right">
+                                          <div className="flex items-center justify-end gap-2">
+                                            {(currentUser?.uid === reg.userId || isAdmin) && (
+                                              <button
+                                                onClick={() => startEditing(reg)}
+                                                className="sm:text-[10px] text-[8px] font-black text-primary hover:bg-primary/10 px-4 py-3 rounded-xl transition-all uppercase tracking-widest"
+                                              >
+                                                EDITAR
+                                              </button>
+                                            )}
+                                            {currentUser?.uid === reg.userId || isAdmin ? (
+                                              <button
+                                                onClick={() => removeRegistration(reg.id)}
+                                                className="sm:text-[10px] text-[8px] font-black text-red-500/30 hover:text-red-500 hover:bg-red-500/10 px-4 py-3 rounded-xl transition-all uppercase tracking-widest flex items-center gap-2"
+                                              >
+                                                 <Trash2 className="w-3.5 h-3.5" /> <span className="hidden xs:inline">REMOVER</span>
+                                              </button>
+                                            ) : (
+                                              <div className="w-5 h-5 rounded-full bg-primary/10 border-2 border-primary/30 flex items-center justify-center" title="Número Ocupado">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_10px_rgba(212,175,55,0.8)]" />
+                                              </div>
+                                            )}
+                                          </div>
+                                       </td>
+                                    </motion.tr>
+                                  ))
+                              )}
+                           </AnimatePresence>
+                        </tbody>
+                     </table>
+                  </div>
+               </div>
+             ) : (
+               <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-5 md:grid-cols-8 lg:grid-cols-10 gap-3 sm:gap-4 p-4 sm:p-8 bg-[#111] border border-[#1a3b32] rounded-[3rem] shadow-2xl">
+                  {Array.from({ length: 99 }, (_, i) => {
+                    const num = (i + 1).toString().padStart(2, '0');
+                    const registration = registrations.find(r => r.number === num || parseInt(r.number) === i + 1);
+                    const isTaken = !!registration;
+                    const isMine = registration?.userId === currentUser?.uid;
+                    const matchesSearch = searchTerm === '' || 
+                      num.includes(searchTerm) || 
+                      (registration && registration.name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+                    if (!matchesSearch) return null;
+
+                    return (
+                      <motion.div
+                        key={num}
+                        layout
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        onClick={() => {
+                          if (isLoggingIn) return;
+                          if (isTaken) {
+                            if (isMine || isAdmin) {
+                              startEditing(registration!);
+                            }
+                          } else {
+                            setNumber(num);
+                            currentUser ? setIsModalOpen(true) : handleLogin();
+                          }
+                        }}
+                        className={`relative aspect-square flex flex-col items-center justify-center rounded-[1.5rem] border-2 transition-all cursor-pointer group ${
+                          isMine 
+                            ? 'bg-primary border-primary text-black shadow-xl shadow-primary/30 scale-105 z-10' 
+                            : isTaken 
+                              ? 'bg-white/[0.03] border-white/5 text-white/20 grayscale' 
+                              : 'bg-white/2 border-white/10 text-white/60 hover:border-primary/50 hover:bg-primary/5 hover:scale-110 active:scale-95'
+                        } ${isLoggingIn && !isTaken ? 'opacity-50 cursor-wait' : ''}`}
+                      >
+                        {isLoggingIn && !isTaken && num === number ? (
+                          <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <span className={`text-xl sm:text-2xl font-black italic tracking-tighter ${isMine ? 'text-black' : isTaken ? 'text-white/10' : 'text-primary'}`}>
+                            {num}
+                          </span>
+                        )}
+                        
+                        {isTaken && (
+                          <div className={`absolute bottom-2 px-1 text-[6px] font-black uppercase truncate w-full text-center ${isMine ? 'text-black/60' : 'text-white/10'}`}>
+                            {registration.name}
+                          </div>
+                        )}
+
+                        {isMine && (
+                          <div className="absolute top-1 right-1 bg-black p-0.5 rounded-full shadow-lg">
+                            <Check className="w-2 h-2 text-primary" />
+                          </div>
+                        )}
+
+                        {!isTaken && (
+                          <div className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Plus className="w-3 h-3 text-primary" />
+                          </div>
+                        )}
+                      </motion.div>
+                    );
+                  })}
+               </div>
+             )}
           </div>
         </div>
       </main>
