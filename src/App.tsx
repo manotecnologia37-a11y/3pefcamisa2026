@@ -248,11 +248,26 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  const handleLogin = async () => {
+  const handleLogin = async (onSuccess?: () => void) => {
     if (isLoggingIn) return;
     setIsLoggingIn(true);
+    setError(null);
     try {
+      // Check if already logged in but state hasn't updated
+      if (auth.currentUser) {
+        setCurrentUser(auth.currentUser);
+        setIsAdmin(ADMIN_EMAILS.includes(auth.currentUser.email || ''));
+        if (onSuccess) onSuccess();
+        return;
+      }
+
       await signInWithGoogle();
+      
+      // If sign in is successful, the onAuthStateChanged will handle the state,
+      // but we might want to trigger the action immediately if we have auth.currentUser
+      if (auth.currentUser && onSuccess) {
+        onSuccess();
+      }
     } catch (err: any) {
       console.error("Login attempt failed:", err);
       if (err.code === 'auth/popup-closed-by-user') {
@@ -268,6 +283,21 @@ export default function App() {
       }
     } finally {
       setIsLoggingIn(false);
+    }
+  };
+
+  const handleOpenReservation = (customNumber?: string) => {
+    if (customNumber) setNumber(customNumber);
+    else setNumber('');
+    
+    setName('');
+    setRecipientName('');
+    setResponsibleName('');
+    
+    if (currentUser || auth.currentUser) {
+      setIsModalOpen(true);
+    } else {
+      handleLogin(() => setIsModalOpen(true));
     }
   };
 
@@ -714,13 +744,7 @@ export default function App() {
             </p>
             
             <button
-               onClick={() => {
-                 setNumber('');
-                 setName('');
-                 setRecipientName('');
-                 setResponsibleName('');
-                 currentUser ? setIsModalOpen(true) : handleLogin();
-               }}
+               onClick={() => handleOpenReservation()}
                disabled={(isLoggingIn) || (!siteConfig.isOpen && !isAdmin)}
                className={`${(siteConfig.isOpen || isAdmin) ? 'bg-primary hover:bg-primary/90 shadow-2xl hover:shadow-primary/20 hover:scale-105 active:scale-95' : 'bg-gray-800 text-gray-500 cursor-not-allowed'} px-6 py-4 sm:px-10 sm:py-6 rounded-2xl sm:rounded-3xl flex items-center gap-3 sm:gap-4 transition-all group z-30 ${isLoggingIn ? 'opacity-70 cursor-wait' : ''}`}
             >
@@ -734,7 +758,7 @@ export default function App() {
                     )}
                    </div>
                    <span className="text-black font-black text-sm sm:text-lg uppercase tracking-widest italic">
-                     {isLoggingIn ? 'PROCESSANDO...' : currentUser ? 'FAZER MINHA RESERVA' : 'ENTRE PARA RESERVAR'}
+                     {isLoggingIn ? 'PROCESSANDO...' : (currentUser || auth.currentUser) ? 'FAZER MINHA RESERVA' : 'ENTRE PARA RESERVAR'}
                    </span>
                  </>
                ) : (
@@ -870,7 +894,7 @@ export default function App() {
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                       <button
-                        onClick={() => currentUser ? setIsModalOpen(true) : handleLogin()}
+                        onClick={() => handleOpenReservation()}
                         disabled={isLoggingIn}
                         className={`bg-primary hover:bg-primary/90 text-black font-black text-[10px] px-4 sm:px-6 py-3 rounded-2xl transition-all shadow-xl uppercase italic tracking-widest active:scale-95 whitespace-nowrap ${isLoggingIn ? 'opacity-50 cursor-wait' : ''}`}
                       >
@@ -1081,8 +1105,7 @@ export default function App() {
                               startEditing(registration!);
                             }
                           } else {
-                            setNumber(num);
-                            currentUser ? setIsModalOpen(true) : handleLogin();
+                            handleOpenReservation(num);
                           }
                         }}
                         className={`relative aspect-square flex flex-col items-center justify-center rounded-[1.5rem] border-2 transition-all cursor-pointer group ${
